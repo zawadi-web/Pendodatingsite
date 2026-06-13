@@ -28,6 +28,9 @@ export default function WalletPage() {
   const [payError, setPayError] = useState('');
   const [sysConfig, setSysConfig] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const [checkoutID, setCheckoutID] = useState('');
+  const [isSimulated, setIsSimulated] = useState(false);
+  const [simulateStatus, setSimulateStatus] = useState<'IDLE' | 'WAITING' | 'SUCCESS' | 'FAILED'>('IDLE');
 
   useEffect(() => {
     const init = async () => {
@@ -62,6 +65,9 @@ export default function WalletPage() {
     if (!selectedPack || !mpesaPhone) return;
     setPaying(true);
     setPayError('');
+    setPaySuccess(false);
+    setIsSimulated(false);
+    setCheckoutID('');
     try {
       const res = await fetch('/api/mpesa/stkpush', {
         method: 'POST',
@@ -69,26 +75,62 @@ export default function WalletPage() {
         body: JSON.stringify({
           phone: mpesaPhone,
           amount: selectedPack.price,
-          accountReference: `ws_COINS_${selectedPack.id}_${selectedPack.coins}`,
+          accountReference: `ws_COINS_${selectedPack.id}_${selectedPack.coins + selectedPack.bonus}`,
           transactionDesc: `Pendo Coins: ${selectedPack.coins + selectedPack.bonus} coins`,
         }),
       });
-      if (res.ok) {
-        setPaySuccess(true);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Payment initiation failed. Try again.');
+
+      setCheckoutID(data.checkoutRequestID);
+      setIsSimulated(data.simulated ?? false);
+      setPaySuccess(true);
+
+      if (!data.simulated) {
         setTimeout(() => {
           setPaySuccess(false);
           setSelectedPack(null);
           setMpesaPhone('');
           fetchWallet();
         }, 5000);
-      } else {
-        const d = await res.json();
-        setPayError(d.error || 'Payment initiation failed. Try again.');
       }
-    } catch {
-      setPayError('Network error. Please try again.');
+    } catch (err: any) {
+      setPayError(err.message || 'Network error. Please try again.');
     } finally {
       setPaying(false);
+    }
+  };
+
+  const handleSimulate = async (status: 'SUCCESS' | 'FAILED') => {
+    setPayError('');
+    setSimulateStatus('WAITING');
+    try {
+      const res = await fetch('/api/mpesa/simulate-callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkoutRequestID: checkoutID, status }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Simulation failed');
+
+      if (status === 'SUCCESS') {
+        setSimulateStatus('SUCCESS');
+        fetchWallet();
+        setTimeout(() => {
+          setPaySuccess(false);
+          setSelectedPack(null);
+          setMpesaPhone('');
+          setSimulateStatus('IDLE');
+          setIsSimulated(false);
+        }, 3000);
+      } else {
+        setSimulateStatus('FAILED');
+        setPayError('Simulated payment failed.');
+      }
+    } catch (err: any) {
+      setPayError(err.message);
+      setSimulateStatus('FAILED');
     }
   };
 
@@ -223,12 +265,39 @@ export default function WalletPage() {
               </div>
 
               {paySuccess ? (
-                <div className="flex flex-col items-center py-8 text-center gap-3">
-                  <CheckCircle className="w-16 h-16 text-emerald-400" />
-                  <h4 className="text-xl font-bold text-white">Payment Request Sent!</h4>
+                <div className="flex flex-col items-center py-6 text-center gap-3">
+                  <CheckCircle className={`w-16 h-16 ${simulateStatus === 'SUCCESS' ? 'text-emerald-400' : 'text-purple-400 animate-pulse'}`} />
+                  <h4 className="text-xl font-bold text-white">
+                    {simulateStatus === 'SUCCESS' ? 'Coins Purchased Successfully!' : 'Payment Request Sent!'}
+                  </h4>
                   <p className="text-[var(--text-muted)] text-sm max-w-xs">
-                    Check your phone for the M-Pesa prompt. Your coins will be credited automatically after payment.
+                    {simulateStatus === 'SUCCESS'
+                      ? `Successfully credited ${selectedPack.coins + selectedPack.bonus} coins to your wallet.`
+                      : 'Check your phone for the M-Pesa prompt. Your coins will be credited automatically.'}
                   </p>
+
+                  {isSimulated && simulateStatus !== 'SUCCESS' && (
+                    <div className="bg-amber-950/20 border border-amber-800/30 rounded-xl p-4 space-y-2 mt-4 w-full text-left">
+                      <p className="text-xs text-amber-400 font-bold uppercase">Development Simulator</p>
+                      <p className="text-xs text-[var(--text-muted)]">This is running in simulated mode. Choose an action to test the callback:</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSimulate('SUCCESS')}
+                          disabled={simulateStatus === 'WAITING'}
+                          className="pendo-btn text-xs bg-emerald-600 hover:bg-emerald-700 flex-1"
+                        >
+                          Simulate Success
+                        </button>
+                        <button
+                          onClick={() => handleSimulate('FAILED')}
+                          disabled={simulateStatus === 'WAITING'}
+                          className="pendo-btn text-xs bg-rose-600 hover:bg-rose-700 flex-1"
+                        >
+                          Simulate Failure
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>

@@ -22,6 +22,8 @@ export async function POST(request: Request) {
     if (status === 'SUCCESS') {
       const mockReceipt = 'MPESA' + Math.random().toString(36).substring(2, 9).toUpperCase();
 
+      const purchaseType = payment.receiptNumber || '';
+
       // 1. Update Payment status to SUCCESS
       const updatedPayment = await prisma.payment.update({
         where: { id: payment.id },
@@ -37,33 +39,50 @@ export async function POST(request: Request) {
         where: { checkoutRequestID },
       });
 
-      if (coinPurchase) {
-        await prisma.coinPurchase.update({
-          where: { id: coinPurchase.id },
-          data: { status: 'SUCCESS' },
-        });
+      if (coinPurchase || purchaseType.startsWith('PENDING_COINS_') || checkoutRequestID.startsWith('ws_COINS_')) {
+        let coins = 0;
+        if (coinPurchase) {
+          coins = coinPurchase.coins;
+        } else if (purchaseType.startsWith('PENDING_COINS_')) {
+          coins = parseInt(purchaseType.split('_')[2]) || 0;
+        } else {
+          coins = parseInt(checkoutRequestID.split('_')[1]) || 0;
+        }
+
+        if (coinPurchase) {
+          await prisma.coinPurchase.update({
+            where: { id: coinPurchase.id },
+            data: { status: 'SUCCESS' },
+          });
+        }
 
         // Add coins to wallet
         await createWalletTransaction(
           payment.userId,
           0.0, // No balance increase, this was coin purchase
-          coinPurchase.coins,
+          coins,
           'DEPOSIT',
-          `Credited ${coinPurchase.coins} coins via M-Pesa (${mockReceipt})`,
+          `Credited ${coins} coins via M-Pesa (${mockReceipt})`,
           'SUCCESS',
           checkoutRequestID
         );
 
         return NextResponse.json({
-          message: `M-Pesa payment successful! ${coinPurchase.coins} coins credited to wallet.`,
+          message: `M-Pesa payment successful! ${coins} coins credited to wallet.`,
           payment: updatedPayment,
         });
       }
 
       // Check B: Subscription upgrade (e.g. prefix `ws_SUB_` or matching price)
-      if (checkoutRequestID.startsWith('ws_SUB_')) {
-        const parts = checkoutRequestID.split('_');
-        const planType = parts[2] || 'MONTHLY'; // e.g. WEEKLY, MONTHLY, YEARLY
+      if (purchaseType.startsWith('PENDING_SUB_') || checkoutRequestID.startsWith('ws_SUB_')) {
+        let planType = 'MONTHLY';
+        if (purchaseType.startsWith('PENDING_SUB_')) {
+          planType = purchaseType.split('_')[2] || 'MONTHLY';
+        } else {
+          const parts = checkoutRequestID.split('_');
+          planType = parts[2] || 'MONTHLY';
+        }
+
         let durationDays = 30;
         if (planType === 'WEEKLY') durationDays = 7;
         else if (planType === 'YEARLY') durationDays = 365;

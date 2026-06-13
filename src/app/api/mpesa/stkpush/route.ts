@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
 import prisma from '@/lib/db';
+import { getSystemConfig } from '@/lib/config';
 
 // Simple helper to generate unique checkout request ID for simulator
 function generateMockCheckoutID() {
@@ -19,15 +20,17 @@ export async function POST(request: Request) {
 
     const userId = decoded.id;
     const body = await request.json();
-    let { phoneNumber, amount, planType, accountReference, transactionDesc } = body;
+    let { phoneNumber, phone, amount, planType, accountReference, transactionDesc } = body;
 
-    if (!phoneNumber) {
+    const targetPhone = phoneNumber || phone;
+
+    if (!targetPhone) {
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
     // Standardize phone number to Safaricom 2547XXXXXXXX or 2541XXXXXXXX format
     // Strip leading '+' or '0'
-    let cleanPhone = phoneNumber.replace(/\D/g, '');
+    let cleanPhone = targetPhone.replace(/\D/g, '');
     if (cleanPhone.startsWith('0')) {
       cleanPhone = '254' + cleanPhone.substring(1);
     } else if (cleanPhone.startsWith('7') || cleanPhone.startsWith('1')) {
@@ -41,11 +44,21 @@ export async function POST(request: Request) {
     // Default premium price is 100 KES
     const finalAmount = parseFloat(amount) || 100.0;
 
+    // Parse coins from accountReference (e.g. ws_COINS_starter_50) or body
+    let coinsToCredit = 0;
+    const ref = accountReference || '';
+    if (ref.startsWith('ws_COINS_')) {
+      const parts = ref.split('_');
+      coinsToCredit = parseInt(parts[3]) || parseInt(parts[2]) || 0;
+    }
+
     // If a planType is provided, create a subscription-encoded checkout ID
     // This allows the simulate-callback to activate the subscription on success
     let checkoutRequestID: string;
     if (planType && ['WEEKLY', 'MONTHLY', 'YEARLY'].includes(planType)) {
       checkoutRequestID = `ws_SUB_${planType}_${Math.random().toString(36).substring(2, 8)}_${Date.now().toString(36)}`;
+    } else if (coinsToCredit > 0) {
+      checkoutRequestID = `ws_COINS_${coinsToCredit}_${Math.random().toString(36).substring(2, 8)}_${Date.now().toString(36)}`;
     } else {
       checkoutRequestID = generateMockCheckoutID();
     }
@@ -53,12 +66,21 @@ export async function POST(request: Request) {
     const finalAccountRef = accountReference || (planType ? `PendoPremium${planType}` : 'PendoPlatform');
     const finalTransDesc = transactionDesc || 'Pendo Platform Payment';
 
-    // Check if Daraja API credentials are in environment variables
-    const consumerKey = process.env.MPESA_CONSUMER_KEY;
-    const consumerSecret = process.env.MPESA_CONSUMER_SECRET;
-    const passkey = process.env.MPESA_PASSKEY;
-    const shortcode = process.env.MPESA_SHORTCODE || '174379'; // default sandbox paybill
-    const callbackUrl = process.env.MPESA_CALLBACK_URL; // public URL for safaricom callbacks
+    // Check if Daraja API credentials are in environment variables or database
+    const sysConfig = await getSystemConfig();
+    const consumerKey = sysConfig.mpesaConsumerKey || process.env.MPESA_CONSUMER_KEY;
+    const consumerSecret = sysConfig.mpesaConsumerSecret || process.env.MPESA_CONSUMER_SECRET;
+    const passkey = sysConfig.mpesaPasskey || process.env.MPESA_PASSKEY;
+    const shortcode = sysConfig.mpesaShortCode || process.env.MPESA_SHORTCODE || '174379'; // default sandbox paybill
+    const callbackUrl = sysConfig.mpesaCallbackUrl || process.env.MPESA_CALLBACK_URL || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mpesa/callback`; // public URL for safaricom callbacks
+
+    // Metadata to store in receiptNumber temporarily
+    let pendingMetadata = '';
+    if (planType && ['WEEKLY', 'MONTHLY', 'YEARLY'].includes(planType)) {
+      pendingMetadata = `PENDING_SUB_${planType}`;
+    } else if (coinsToCredit > 0) {
+      pendingMetadata = `PENDING_COINS_${coinsToCredit}`;
+    }
 
     // Create payment in PENDING status
     const payment = await prisma.payment.create({
@@ -68,8 +90,22 @@ export async function POST(request: Request) {
         phoneNumber: cleanPhone,
         checkoutRequestID,
         status: 'PENDING',
+        receiptNumber: pendingMetadata || null,
       },
     });
+
+    // Create CoinPurchase log in PENDING status
+    if (coinsToCredit > 0) {
+      await prisma.coinPurchase.create({
+        data: {
+          userId,
+          coins: coinsToCredit,
+          amount: finalAmount,
+          checkoutRequestID,
+          status: 'PENDING',
+        }
+      });
+    }
 
     if (consumerKey && consumerSecret && passkey && callbackUrl) {
       // Real or Sandbox Daraja API STK Push
@@ -120,6 +156,14 @@ export async function POST(request: Request) {
             where: { id: payment.id },
             data: { checkoutRequestID: stkData.CheckoutRequestID },
           });
+
+          // Sync CoinPurchase checkout ID with Safaricom's real checkout ID
+          if (coinsToCredit > 0) {
+            await prisma.coinPurchase.update({
+              where: { checkoutRequestID },
+              data: { checkoutRequestID: stkData.CheckoutRequestID },
+            });
+          }
 
           return NextResponse.json({
             message: 'STK Push initiated successfully',

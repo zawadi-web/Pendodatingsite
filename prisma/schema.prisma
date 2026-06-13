@@ -250,5 +250,10 @@ model SystemConfig {
   coinPrice50        Float    @default(450.0)
   coinPrice100       Float    @default(800.0)
   commissionFeePct   Float    @default(10.0)
+  mpesaConsumerKey   String?
+  mpesaConsumerSecret String?
+  mpesaPasskey       String?
+  mpesaShortCode     String?
+  mpesaCallbackUrl   String?
   updatedAt          DateTime @updatedAt
 }

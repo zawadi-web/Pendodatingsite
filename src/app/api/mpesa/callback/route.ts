@@ -32,6 +32,8 @@ export async function POST(request: Request) {
         receiptNumber = receiptItem.Value;
       }
 
+      const purchaseType = payment.receiptNumber || '';
+
       // 1. Update Payment status to SUCCESS
       await prisma.payment.update({
         where: { id: payment.id },
@@ -47,19 +49,30 @@ export async function POST(request: Request) {
         where: { checkoutRequestID: CheckoutRequestID },
       });
 
-      if (coinPurchase) {
-        await prisma.coinPurchase.update({
-          where: { id: coinPurchase.id },
-          data: { status: 'SUCCESS' },
-        });
+      if (coinPurchase || purchaseType.startsWith('PENDING_COINS_') || CheckoutRequestID.startsWith('ws_COINS_')) {
+        let coins = 0;
+        if (coinPurchase) {
+          coins = coinPurchase.coins;
+        } else if (purchaseType.startsWith('PENDING_COINS_')) {
+          coins = parseInt(purchaseType.split('_')[2]) || 0;
+        } else {
+          coins = parseInt(CheckoutRequestID.split('_')[1]) || 0;
+        }
+
+        if (coinPurchase) {
+          await prisma.coinPurchase.update({
+            where: { id: coinPurchase.id },
+            data: { status: 'SUCCESS' },
+          });
+        }
 
         // Add coins to wallet
         await createWalletTransaction(
           payment.userId,
           0.0,
-          coinPurchase.coins,
+          coins,
           'DEPOSIT',
-          `Credited ${coinPurchase.coins} coins via M-Pesa (${receiptNumber})`,
+          `Credited ${coins} coins via M-Pesa (${receiptNumber})`,
           'SUCCESS',
           CheckoutRequestID
         );
@@ -69,9 +82,15 @@ export async function POST(request: Request) {
       }
 
       // Check B: Subscription upgrade
-      if (CheckoutRequestID.startsWith('ws_SUB_')) {
-        const parts = CheckoutRequestID.split('_');
-        const planType = parts[2] || 'MONTHLY';
+      if (purchaseType.startsWith('PENDING_SUB_') || CheckoutRequestID.startsWith('ws_SUB_')) {
+        let planType = 'MONTHLY';
+        if (purchaseType.startsWith('PENDING_SUB_')) {
+          planType = purchaseType.split('_')[2] || 'MONTHLY';
+        } else {
+          const parts = CheckoutRequestID.split('_');
+          planType = parts[2] || 'MONTHLY';
+        }
+
         let durationDays = 30;
         if (planType === 'WEEKLY') durationDays = 7;
         else if (planType === 'YEARLY') durationDays = 365;

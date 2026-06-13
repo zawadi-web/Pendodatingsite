@@ -66,7 +66,28 @@ export default function AdminDashboard() {
         const pd = await paymentsRes.json();
         setPayments(pd.ledger || pd.payments || []);
       }
-      if (configRes.ok) setConfig((await configRes.json()).config || {});
+      if (configRes.ok) {
+        const c = (await configRes.json()).config || {};
+        setConfig({
+          saccoName: c.saccoAccName,
+          saccoAccount: c.saccoAccNo,
+          paymentInstructions: c.saccoInstructions,
+          mpesaEnabled: c.saccoEnabled,
+          profileUnlockCost: c.profileUnlockFee,
+          mediaUnlockCost: c.mediaUnlockFee,
+          premiumWeeklyPrice: c.weeklySubPrice,
+          premiumMonthlyPrice: c.monthlySubPrice,
+          premiumYearlyPrice: c.yearlySubPrice,
+          coinPrice10: c.coinPrice10,
+          coinPrice50: c.coinPrice50,
+          coinPrice100: c.coinPrice100,
+          mpesaConsumerKey: c.mpesaConsumerKey,
+          mpesaConsumerSecret: c.mpesaConsumerSecret,
+          mpesaPasskey: c.mpesaPasskey,
+          mpesaShortCode: c.mpesaShortCode,
+          mpesaCallbackUrl: c.mpesaCallbackUrl,
+        });
+      }
     } catch (error) {
       console.error('Failed to load admin data', error);
     } finally {
@@ -579,41 +600,92 @@ export default function AdminDashboard() {
               <h3 className="font-bold text-white flex items-center gap-2">
                 <Coins className="w-5 h-5 text-[var(--premium)]" /> Pricing & Coins
               </h3>
-              <div>
-                <label className="pendo-label">Profile Unlock Cost (coins)</label>
-                <input
-                  type="number"
-                  className="pendo-input"
-                  value={config.profileUnlockCost ?? 100}
-                  onChange={(e) => setConfig({ ...config, profileUnlockCost: parseInt(e.target.value) })}
-                />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="pendo-label">Profile Unlock Fee (coins)</label>
+                  <input
+                    type="number"
+                    className="pendo-input"
+                    value={config.profileUnlockCost ?? 200}
+                    onChange={(e) => setConfig({ ...config, profileUnlockCost: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label className="pendo-label">Media Unlock Fee (coins)</label>
+                  <input
+                    type="number"
+                    className="pendo-input"
+                    value={config.mediaUnlockCost ?? 100}
+                    onChange={(e) => setConfig({ ...config, mediaUnlockCost: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="pendo-label">Media Unlock Cost (coins)</label>
-                <input
-                  type="number"
-                  className="pendo-input"
-                  value={config.mediaUnlockCost ?? 50}
-                  onChange={(e) => setConfig({ ...config, mediaUnlockCost: parseInt(e.target.value) })}
-                />
+
+              <div className="border-t border-[var(--border)] pt-4 space-y-3">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Premium Subscription Prices (KES)</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="pendo-label">Weekly Price</label>
+                    <input
+                      type="number"
+                      className="pendo-input"
+                      value={config.premiumWeeklyPrice ?? 1000}
+                      onChange={(e) => setConfig({ ...config, premiumWeeklyPrice: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <label className="pendo-label">Monthly Price</label>
+                    <input
+                      type="number"
+                      className="pendo-input"
+                      value={config.premiumMonthlyPrice ?? 2500}
+                      onChange={(e) => setConfig({ ...config, premiumMonthlyPrice: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <label className="pendo-label">Yearly Price</label>
+                    <input
+                      type="number"
+                      className="pendo-input"
+                      value={config.premiumYearlyPrice ?? 5000}
+                      onChange={(e) => setConfig({ ...config, premiumYearlyPrice: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="pendo-label">Message Cost (coins)</label>
-                <input
-                  type="number"
-                  className="pendo-input"
-                  value={config.messageCoinCost ?? 5}
-                  onChange={(e) => setConfig({ ...config, messageCoinCost: parseInt(e.target.value) })}
-                />
-              </div>
-              <div>
-                <label className="pendo-label">Premium Weekly Price (KES)</label>
-                <input
-                  type="number"
-                  className="pendo-input"
-                  value={config.premiumWeeklyPrice ?? 500}
-                  onChange={(e) => setConfig({ ...config, premiumWeeklyPrice: parseInt(e.target.value) })}
-                />
+
+              <div className="border-t border-[var(--border)] pt-4 space-y-3">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Coin Package Prices (KES)</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="pendo-label">10 Coins Price</label>
+                    <input
+                      type="number"
+                      className="pendo-input"
+                      value={config.coinPrice10 ?? 100}
+                      onChange={(e) => setConfig({ ...config, coinPrice10: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <label className="pendo-label">50 Coins Price</label>
+                    <input
+                      type="number"
+                      className="pendo-input"
+                      value={config.coinPrice50 ?? 450}
+                      onChange={(e) => setConfig({ ...config, coinPrice50: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <label className="pendo-label">100 Coins Price</label>
+                    <input
+                      type="number"
+                      className="pendo-input"
+                      value={config.coinPrice100 ?? 800}
+                      onChange={(e) => setConfig({ ...config, coinPrice100: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

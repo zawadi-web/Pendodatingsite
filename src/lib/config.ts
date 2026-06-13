@@ -14,6 +14,11 @@ export const DEFAULT_CONFIG = {
   coinPrice50: 450.0,
   coinPrice100: 800.0,
   commissionFeePct: 10.0,
+  mpesaConsumerKey: "",
+  mpesaConsumerSecret: "",
+  mpesaPasskey: "",
+  mpesaShortCode: "",
+  mpesaCallbackUrl: "",
 };
 
 export async function getSystemConfig() {

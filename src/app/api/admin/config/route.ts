@@ -14,7 +14,7 @@ export async function GET() {
   }
 }
 
-export async function PUT(request: Request) {
+export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('auth_token');
@@ -26,54 +26,68 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
+    const configData = body.config || body; // Handle both direct object and nested { config: {...} }
+
     const {
-      saccoAccName,
-      saccoAccNo,
-      saccoInstructions,
-      saccoEnabled,
-      profileUnlockFee,
-      mediaUnlockFee,
-      weeklySubPrice,
-      monthlySubPrice,
-      yearlySubPrice,
+      saccoName,
+      saccoAccount,
+      paymentInstructions,
+      mpesaEnabled,
+      profileUnlockCost,
+      mediaUnlockCost,
+      premiumWeeklyPrice,
+      premiumMonthlyPrice,
+      premiumYearlyPrice,
       coinPrice10,
       coinPrice50,
       coinPrice100,
       commissionFeePct,
-    } = body;
+      mpesaConsumerKey,
+      mpesaConsumerSecret,
+      mpesaPasskey,
+      mpesaShortCode,
+    } = configData;
 
     const updatedConfig = await prisma.systemConfig.upsert({
       where: { id: 'default' },
       update: {
-        saccoAccName,
-        saccoAccNo,
-        saccoInstructions,
-        saccoEnabled,
-        profileUnlockFee: parseFloat(profileUnlockFee),
-        mediaUnlockFee: parseFloat(mediaUnlockFee),
-        weeklySubPrice: parseFloat(weeklySubPrice),
-        monthlySubPrice: parseFloat(monthlySubPrice),
-        yearlySubPrice: parseFloat(yearlySubPrice),
-        coinPrice10: parseFloat(coinPrice10),
-        coinPrice50: parseFloat(coinPrice50),
-        coinPrice100: parseFloat(coinPrice100),
-        commissionFeePct: parseFloat(commissionFeePct),
+        saccoAccName: saccoName !== undefined ? saccoName : undefined,
+        saccoAccNo: saccoAccount !== undefined ? saccoAccount : undefined,
+        saccoInstructions: paymentInstructions !== undefined ? paymentInstructions : undefined,
+        saccoEnabled: mpesaEnabled !== undefined ? mpesaEnabled : undefined,
+        profileUnlockFee: profileUnlockCost !== undefined ? parseFloat(profileUnlockCost) : undefined,
+        mediaUnlockFee: mediaUnlockCost !== undefined ? parseFloat(mediaUnlockCost) : undefined,
+        weeklySubPrice: premiumWeeklyPrice !== undefined ? parseFloat(premiumWeeklyPrice) : undefined,
+        monthlySubPrice: premiumMonthlyPrice !== undefined ? parseFloat(premiumMonthlyPrice) : undefined,
+        yearlySubPrice: premiumYearlyPrice !== undefined ? parseFloat(premiumYearlyPrice) : undefined,
+        coinPrice10: coinPrice10 !== undefined ? parseFloat(coinPrice10) : undefined,
+        coinPrice50: coinPrice50 !== undefined ? parseFloat(coinPrice50) : undefined,
+        coinPrice100: coinPrice100 !== undefined ? parseFloat(coinPrice100) : undefined,
+        commissionFeePct: commissionFeePct !== undefined ? parseFloat(commissionFeePct) : undefined,
+        mpesaConsumerKey: mpesaConsumerKey !== undefined ? mpesaConsumerKey : undefined,
+        mpesaConsumerSecret: mpesaConsumerSecret !== undefined ? mpesaConsumerSecret : undefined,
+        mpesaPasskey: mpesaPasskey !== undefined ? mpesaPasskey : undefined,
+        mpesaShortCode: mpesaShortCode !== undefined ? mpesaShortCode : undefined,
       },
       create: {
         id: 'default',
-        saccoAccName,
-        saccoAccNo,
-        saccoInstructions,
-        saccoEnabled,
-        profileUnlockFee: parseFloat(profileUnlockFee) || 200.0,
-        mediaUnlockFee: parseFloat(mediaUnlockFee) || 100.0,
-        weeklySubPrice: parseFloat(weeklySubPrice) || 1000.0,
-        monthlySubPrice: parseFloat(monthlySubPrice) || 2500.0,
-        yearlySubPrice: parseFloat(yearlySubPrice) || 5000.0,
+        saccoAccName: saccoName || "Pendo SACCO Account",
+        saccoAccNo: saccoAccount || "174379",
+        saccoInstructions: paymentInstructions || "1. Go to Lipa na M-Pesa...",
+        saccoEnabled: mpesaEnabled !== undefined ? mpesaEnabled : true,
+        profileUnlockFee: parseFloat(profileUnlockCost) || 200.0,
+        mediaUnlockFee: parseFloat(mediaUnlockCost) || 100.0,
+        weeklySubPrice: parseFloat(premiumWeeklyPrice) || 1000.0,
+        monthlySubPrice: parseFloat(premiumMonthlyPrice) || 2500.0,
+        yearlySubPrice: parseFloat(premiumYearlyPrice) || 5000.0,
         coinPrice10: parseFloat(coinPrice10) || 100.0,
         coinPrice50: parseFloat(coinPrice50) || 450.0,
         coinPrice100: parseFloat(coinPrice100) || 800.0,
         commissionFeePct: parseFloat(commissionFeePct) || 10.0,
+        mpesaConsumerKey: mpesaConsumerKey || "",
+        mpesaConsumerSecret: mpesaConsumerSecret || "",
+        mpesaPasskey: mpesaPasskey || "",
+        mpesaShortCode: mpesaShortCode || "",
       },
     });
 
