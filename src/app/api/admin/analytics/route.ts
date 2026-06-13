@@ -33,7 +33,7 @@ export async function GET() {
     const messagesSent = await prisma.message.count();
 
     // Matches
-    const matchesCreated = await prisma.match.count({ where: { isMatch: true } });
+    const matchesCreated = await prisma.match.count();
 
     // Financial: all transactions
     const allTx = await prisma.transaction.findMany({ where: { status: 'SUCCESS' } });

@@ -60,8 +60,6 @@ export async function POST(request: Request) {
     const shortcode = process.env.MPESA_SHORTCODE || '174379'; // default sandbox paybill
     const callbackUrl = process.env.MPESA_CALLBACK_URL; // public URL for safaricom callbacks
 
-    const checkoutRequestID = generateMockCheckoutID();
-
     // Create payment in PENDING status
     const payment = await prisma.payment.create({
       data: {
