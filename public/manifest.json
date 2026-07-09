@@ -1,0 +1,45 @@
+{
+  "name": "Pendo Dating",
+  "short_name": "Pendo",
+  "description": "Premium dating and matchmaking platform.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A0915",
+  "theme_color": "#FF3366",
+  "orientation": "portrait-primary",
+  "categories": ["lifestyle", "social"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Browse Matches",
+      "url": "/dashboard",
+      "description": "See today's matches"
+    },
+    {
+      "name": "Messages",
+      "url": "/chat",
+      "description": "Open your chats"
+    }
+  ]
+}

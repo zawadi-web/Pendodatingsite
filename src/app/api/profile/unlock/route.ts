@@ -56,50 +56,68 @@ export async function POST(request: Request) {
     // Use coins if available, otherwise check KES balance
     if (wallet.coins >= fee) {
       // Deduct coins
-      await prisma.$transaction(async (tx) => {
-        await tx.wallet.update({
-          where: { userId: decoded.id },
-          data: { coins: { decrement: fee } },
-        });
-        await tx.transaction.create({
-          data: {
-            walletId: wallet.id,
-            amount: -fee,
-            coins: -fee,
-            type: 'PROFILE_UNLOCK',
-            description: `Unlocked profile of ${targetUser.profile?.name || targetUser.email}`,
-            status: 'SUCCESS',
+      try {
+        await prisma.$transaction(async (tx) => {
+          const updateResult = await tx.wallet.updateMany({
+            where: { userId: decoded.id, coins: { gte: fee } },
+            data: { coins: { decrement: fee } },
+          });
+          
+          if (updateResult.count === 0) {
+            throw new Error('Insufficient coins.');
           }
-        });
-        await tx.profileUnlock.create({
-          data: { userId: decoded.id, targetUserId }
-        });
-      });
 
-      return NextResponse.json({ success: true, message: 'Profile unlocked successfully!' });
+          await tx.transaction.create({
+            data: {
+              walletId: wallet.id,
+              amount: -fee,
+              coins: -fee,
+              type: 'PROFILE_UNLOCK',
+              description: `Unlocked profile of ${targetUser.profile?.name || targetUser.email}`,
+              status: 'SUCCESS',
+            }
+          });
+          await tx.profileUnlock.create({
+            data: { userId: decoded.id, targetUserId }
+          });
+        });
+
+        return NextResponse.json({ success: true, message: 'Profile unlocked successfully!' });
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message || 'Transaction failed' }, { status: 400 });
+      }
     } else if (wallet.balance >= fee) {
       // Deduct from KES balance
-      await prisma.$transaction(async (tx) => {
-        await tx.wallet.update({
-          where: { userId: decoded.id },
-          data: { balance: { decrement: fee } },
-        });
-        await tx.transaction.create({
-          data: {
-            walletId: wallet.id,
-            amount: -fee,
-            coins: 0,
-            type: 'PROFILE_UNLOCK',
-            description: `Unlocked profile of ${targetUser.profile?.name || targetUser.email}`,
-            status: 'SUCCESS',
-          }
-        });
-        await tx.profileUnlock.create({
-          data: { userId: decoded.id, targetUserId }
-        });
-      });
+      try {
+        await prisma.$transaction(async (tx) => {
+          const updateResult = await tx.wallet.updateMany({
+            where: { userId: decoded.id, balance: { gte: fee } },
+            data: { balance: { decrement: fee } },
+          });
 
-      return NextResponse.json({ success: true, message: 'Profile unlocked successfully!' });
+          if (updateResult.count === 0) {
+            throw new Error('Insufficient wallet balance.');
+          }
+
+          await tx.transaction.create({
+            data: {
+              walletId: wallet.id,
+              amount: -fee,
+              coins: 0,
+              type: 'PROFILE_UNLOCK',
+              description: `Unlocked profile of ${targetUser.profile?.name || targetUser.email}`,
+              status: 'SUCCESS',
+            }
+          });
+          await tx.profileUnlock.create({
+            data: { userId: decoded.id, targetUserId }
+          });
+        });
+
+        return NextResponse.json({ success: true, message: 'Profile unlocked successfully!' });
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message || 'Transaction failed' }, { status: 400 });
+      }
     } else {
       return NextResponse.json({
         error: `Insufficient coins. You need ${fee} coins to unlock this profile. Top up your wallet.`,

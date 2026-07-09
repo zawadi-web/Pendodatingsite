@@ -63,9 +63,6 @@ export async function POST(request: Request) {
       checkoutRequestID = generateMockCheckoutID();
     }
 
-    const finalAccountRef = accountReference || (planType ? `PendoPremium${planType}` : 'PendoPlatform');
-    const finalTransDesc = transactionDesc || 'Pendo Platform Payment';
-
     // Check if Daraja API credentials are in environment variables or database
     const sysConfig = await getSystemConfig();
     const consumerKey = sysConfig.mpesaConsumerKey || process.env.MPESA_CONSUMER_KEY;
@@ -73,6 +70,25 @@ export async function POST(request: Request) {
     const passkey = sysConfig.mpesaPasskey || process.env.MPESA_PASSKEY;
     const shortcode = sysConfig.mpesaShortCode || process.env.MPESA_SHORTCODE || '174379'; // default sandbox paybill
     const callbackUrl = sysConfig.mpesaCallbackUrl || process.env.MPESA_CALLBACK_URL || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mpesa/callback`; // public URL for safaricom callbacks
+
+    let finalAccountRef = accountReference || (planType ? `PendoPremium${planType}` : 'PendoPlatform');
+    if (shortcode === '506900') {
+      finalAccountRef = '0026005020010444';
+    }
+    const finalTransDesc = transactionDesc || 'Pendo Platform Payment';
+
+    // Append secure webhook token to CallBackURL
+    const webhookSecret = process.env.MPESA_WEBHOOK_SECRET || passkey || 'fallback_secret';
+    const finalCallbackUrl = callbackUrl.includes('?')
+      ? `${callbackUrl}&token=${webhookSecret}`
+      : `${callbackUrl}?token=${webhookSecret}`;
+
+    // Select live vs sandbox base URL dynamically
+    const mpesaEnv = process.env.MPESA_ENV || 'sandbox';
+    const isProd = mpesaEnv === 'production';
+    const mpesaBaseUrl = isProd
+      ? 'https://api.safaricom.co.ke'
+      : 'https://sandbox.safaricom.co.ke';
 
     // Metadata to store in receiptNumber temporarily
     let pendingMetadata = '';
@@ -112,7 +128,7 @@ export async function POST(request: Request) {
       try {
         // 1. Get OAuth Access Token
         const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
-        const tokenRes = await fetch('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', {
+        const tokenRes = await fetch(`${mpesaBaseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
           headers: { Authorization: `Basic ${auth}` },
         });
         const tokenData = await tokenRes.json();
@@ -122,12 +138,26 @@ export async function POST(request: Request) {
           throw new Error('Failed to generate M-Pesa access token');
         }
 
-        // 2. Generate Password
-        const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14); // YYYYMMDDHHmmss
+        // 2. Generate EAT Password and Timestamp (Safaricom requires timezone-aligned EAT YYYYMMDDHHmmss)
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          timeZone: 'Africa/Nairobi',
+        });
+        const parts = formatter.formatToParts(new Date());
+        const partMap: Record<string, string> = {};
+        parts.forEach(p => { partMap[p.type] = p.value; });
+        const timestamp = `${partMap.year}${partMap.month}${partMap.day}${partMap.hour}${partMap.minute}${partMap.second}`;
+
         const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
 
         // 3. Initiate STK Push
-        const stkRes = await fetch('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest', {
+        const stkRes = await fetch(`${mpesaBaseUrl}/mpesa/stkpush/v1/processrequest`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -142,7 +172,7 @@ export async function POST(request: Request) {
             PartyA: cleanPhone,
             PartyB: shortcode,
             PhoneNumber: cleanPhone,
-            CallBackURL: callbackUrl,
+            CallBackURL: finalCallbackUrl,
             AccountReference: finalAccountRef,
             TransactionDesc: finalTransDesc,
           }),

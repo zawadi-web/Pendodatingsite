@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Heart, MessageCircle, User, Sparkles, Shield, LogOut, Coins, Wallet } from 'lucide-react';
+import { Heart, MessageCircle, User, Sparkles, Shield, LogOut, Coins, Wallet, Download, Star } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface HeaderProps {
@@ -13,6 +13,10 @@ export default function Header({ user }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [coinBalance, setCoinBalance] = useState<number | null>(null);
+
+  // PWA Install prompt state
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
 
   const isPremium = user?.profile?.isPremium;
   const isAdmin = user?.role === 'ADMIN';
@@ -26,6 +30,31 @@ export default function Header({ user }: HeaderProps) {
     }
   }, [user]);
 
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('PWA installation accepted by user');
+    }
+    setDeferredPrompt(null);
+    setShowInstallBtn(false);
+  };
+
   const handleLogout = async () => {
     await fetch('/api/auth/session', { method: 'DELETE' });
     router.push('/login');
@@ -37,7 +66,11 @@ export default function Header({ user }: HeaderProps) {
       <div className="max-w-5xl mx-auto flex justify-between items-center">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2 group">
-          <Heart className="w-8 h-8 text-[var(--primary)] fill-[var(--primary)] group-hover:scale-110 transition-transform" />
+          <img 
+            src="/pendo_seductive_logo.png" 
+            alt="Pendo Logo" 
+            className="w-9 h-9 object-contain rounded-xl shadow-lg border border-[var(--primary)]/20 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300"
+          />
           <span className="text-2xl font-black tracking-tight text-gradient">Pendo</span>
         </Link>
 
@@ -53,6 +86,18 @@ export default function Header({ user }: HeaderProps) {
           >
             <Heart className="w-4 h-4" />
             <span className="hidden sm:inline">Swipe</span>
+          </Link>
+
+          <Link
+            href="/likes"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+              pathname === '/likes'
+                ? 'bg-[var(--primary)] text-white'
+                : 'text-[var(--text-muted)] hover:text-white hover:bg-[rgba(255,255,255,0.05)]'
+            }`}
+          >
+            <Star className="w-4 h-4" />
+            <span className="hidden sm:inline">Likes</span>
           </Link>
 
           <Link
@@ -108,10 +153,36 @@ export default function Header({ user }: HeaderProps) {
               <span className="hidden md:inline">Admin</span>
             </Link>
           )}
+
+          {/* Download / Install App Link */}
+          <Link
+            href="/download"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
+              pathname === '/download'
+                ? 'bg-rose-600 text-white'
+                : 'text-rose-400 border border-rose-500/30 hover:bg-rose-950/30 hover:text-rose-300'
+            }`}
+            title="Install Pendo App"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Get App</span>
+          </Link>
         </nav>
 
         {/* Right area: Coin balance + logout */}
         <div className="flex items-center gap-2">
+          {/* Install PWA App Button */}
+          {showInstallBtn && (
+            <button
+              onClick={handleInstallApp}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] transition-all font-bold text-xs shadow-md animate-pulse"
+              title="Install Pendo App to Device"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Install App</span>
+            </button>
+          )}
+
           {/* Coin Balance Chip */}
           {coinBalance !== null && (
             <Link

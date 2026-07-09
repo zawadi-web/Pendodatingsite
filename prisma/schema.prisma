@@ -10,9 +10,14 @@ model User {
   id               String            @id @default(cuid())
   email            String            @unique
   phone            String?           @unique
-  passwordHash     String
+  passwordHash     String?           // Optional for OAuth users
+  googleId         String?           @unique // Google OAuth ID
+  googleEmail      String?           // Email from Google
   role             String            @default("USER") // "USER" or "ADMIN"
   isSuspended      Boolean           @default(false)
+  failedLoginAttempts Int             @default(0)
+  lockoutUntil      DateTime?
+  lastActiveAt     DateTime          @default(now())
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   
@@ -37,6 +42,17 @@ model User {
   reviewsGiven       Review[]        @relation("ReviewsGiven")
   reviewsReceived    Review[]        @relation("ReviewsReceived")
   chatRestriction    ChatRestriction?
+  passwordResets     PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model Profile {
@@ -50,12 +66,17 @@ model Profile {
   bio              String?
   interests        String    // Comma-separated list of tags, e.g. "Travel,Music,Sports"
   location         String?   // City name, e.g. "Nairobi"
+  latitude         Float?
+  longitude        Float?
   photos           String    // JSON or comma-separated string of file paths, e.g. "/uploads/pic1.jpg"
   isVerified       Boolean   @default(false)
   isPremium        Boolean   @default(false)
   premiumUntil     DateTime?
   swipeCountToday  Int       @default(0)
   lastSwipeReset   DateTime  @default(now())
+  instagram        String?
+  facebook         String?
+  telegram         String?
 }
 
 model Like {
@@ -69,6 +90,7 @@ model Like {
   to        User     @relation("LikesReceived", fields: [toId], references: [id], onDelete: Cascade)
   
   @@unique([fromId, toId])
+  @@index([toId, isLike])
 }
 
 model Match {
@@ -90,6 +112,8 @@ model Message {
   imagePath String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([matchId, createdAt])
 }
 
 model Block {
@@ -128,6 +152,8 @@ model Payment {
   status            String   @default("PENDING") // "PENDING", "SUCCESS", "FAILED"
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([userId, createdAt])
 }
 
 // Marketplace Models

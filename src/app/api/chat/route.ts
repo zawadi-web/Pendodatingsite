@@ -80,6 +80,7 @@ export async function GET() {
             photos: otherUser.profile.photos,
             isVerified: otherUser.profile.isVerified,
             isPremium: otherUser.profile.isPremium,
+            lastActiveAt: otherUser.lastActiveAt,
           },
         });
       }

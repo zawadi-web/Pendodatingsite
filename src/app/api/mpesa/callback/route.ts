@@ -1,9 +1,30 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { createWalletTransaction } from '@/lib/wallet';
+import { getSystemConfig } from '@/lib/config';
 
 export async function POST(request: Request) {
   try {
+    // Verify callback webhook token
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get('token');
+
+    const sysConfig = await getSystemConfig();
+    const isProduction = process.env.NODE_ENV === 'production';
+    const hasWebhookSecret = !!process.env.MPESA_WEBHOOK_SECRET;
+    const hasPasskey = !!sysConfig.mpesaPasskey;
+    const expectedToken = process.env.MPESA_WEBHOOK_SECRET || sysConfig.mpesaPasskey || 'fallback_secret';
+
+    if (isProduction && !hasWebhookSecret && !hasPasskey) {
+      console.error('Critical security error: M-Pesa callback attempted in production but no webhook secret or passkey is configured. Fallback token is disabled.');
+      return NextResponse.json({ error: 'Webhook credentials not configured in production' }, { status: 500 });
+    }
+
+    if (!token || token !== expectedToken || (token === 'fallback_secret' && isProduction)) {
+      console.warn(`Unauthorized attempt to access M-Pesa callback from URL: ${request.url}`);
+      return NextResponse.json({ error: 'Unauthorized callback origin' }, { status: 401 });
+    }
+
     const body = await request.json();
     console.log('M-Pesa callback received body:', JSON.stringify(body));
 

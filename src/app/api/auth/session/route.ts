@@ -18,10 +18,20 @@ export async function GET() {
       return NextResponse.json({ user: null }, { status: 401 });
     }
 
-    // Optionally fetch fresh user data and profile
+    // Fetch user — READ ONLY. Do NOT do a write (update lastActiveAt) on
+    // every single session check; that creates unnecessary DB churn and
+    // wastes storage. lastActiveAt is updated only on explicit actions
+    // (e.g. swipes, messages) instead.
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      include: { profile: true },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        role: true,
+        isSuspended: true,
+        profile: true,
+      },
     });
 
     if (!user || user.isSuspended) {
@@ -32,6 +42,7 @@ export async function GET() {
       user: {
         id: user.id,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         profile: user.profile,
       },
@@ -43,10 +54,7 @@ export async function GET() {
 }
 
 export async function DELETE() {
-  // Logout route
   const response = NextResponse.json({ message: 'Logged out successfully' });
-  
   response.cookies.delete('auth_token');
-  
   return response;
 }

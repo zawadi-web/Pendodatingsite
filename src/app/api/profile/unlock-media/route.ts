@@ -54,50 +54,68 @@ export async function POST(request: Request) {
 
     if (wallet.coins >= fee) {
       // Deduct coins
-      await prisma.$transaction(async (tx) => {
-        await tx.wallet.update({
-          where: { userId: decoded.id },
-          data: { coins: { decrement: fee } },
-        });
-        await tx.transaction.create({
-          data: {
-            walletId: wallet.id,
-            amount: -fee,
-            coins: -fee,
-            type: 'MEDIA_UNLOCK',
-            description: `Unlocked media gallery of ${targetUser.profile?.name || targetUser.email}`,
-            status: 'SUCCESS',
-          }
-        });
-        // Record as mediaIndex 0 = full gallery unlock
-        await tx.mediaUnlock.create({
-          data: { userId: decoded.id, targetUserId, mediaIndex: 0 }
-        });
-      });
+      try {
+        await prisma.$transaction(async (tx) => {
+          const updateResult = await tx.wallet.updateMany({
+            where: { userId: decoded.id, coins: { gte: fee } },
+            data: { coins: { decrement: fee } },
+          });
 
-      return NextResponse.json({ success: true, message: 'Media gallery unlocked successfully!' });
+          if (updateResult.count === 0) {
+            throw new Error('Insufficient coins.');
+          }
+
+          await tx.transaction.create({
+            data: {
+              walletId: wallet.id,
+              amount: -fee,
+              coins: -fee,
+              type: 'MEDIA_UNLOCK',
+              description: `Unlocked media gallery of ${targetUser.profile?.name || targetUser.email}`,
+              status: 'SUCCESS',
+            }
+          });
+          // Record as mediaIndex 0 = full gallery unlock
+          await tx.mediaUnlock.create({
+            data: { userId: decoded.id, targetUserId, mediaIndex: 0 }
+          });
+        });
+
+        return NextResponse.json({ success: true, message: 'Media gallery unlocked successfully!' });
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message || 'Transaction failed' }, { status: 400 });
+      }
     } else if (wallet.balance >= fee) {
-      await prisma.$transaction(async (tx) => {
-        await tx.wallet.update({
-          where: { userId: decoded.id },
-          data: { balance: { decrement: fee } },
-        });
-        await tx.transaction.create({
-          data: {
-            walletId: wallet.id,
-            amount: -fee,
-            coins: 0,
-            type: 'MEDIA_UNLOCK',
-            description: `Unlocked media gallery of ${targetUser.profile?.name || targetUser.email}`,
-            status: 'SUCCESS',
-          }
-        });
-        await tx.mediaUnlock.create({
-          data: { userId: decoded.id, targetUserId, mediaIndex: 0 }
-        });
-      });
+      try {
+        await prisma.$transaction(async (tx) => {
+          const updateResult = await tx.wallet.updateMany({
+            where: { userId: decoded.id, balance: { gte: fee } },
+            data: { balance: { decrement: fee } },
+          });
 
-      return NextResponse.json({ success: true, message: 'Media gallery unlocked successfully!' });
+          if (updateResult.count === 0) {
+            throw new Error('Insufficient wallet balance.');
+          }
+
+          await tx.transaction.create({
+            data: {
+              walletId: wallet.id,
+              amount: -fee,
+              coins: 0,
+              type: 'MEDIA_UNLOCK',
+              description: `Unlocked media gallery of ${targetUser.profile?.name || targetUser.email}`,
+              status: 'SUCCESS',
+            }
+          });
+          await tx.mediaUnlock.create({
+            data: { userId: decoded.id, targetUserId, mediaIndex: 0 }
+          });
+        });
+
+        return NextResponse.json({ success: true, message: 'Media gallery unlocked successfully!' });
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message || 'Transaction failed' }, { status: 400 });
+      }
     } else {
       return NextResponse.json({
         error: `Insufficient coins. You need ${fee} coins to unlock this media. Top up your wallet.`,

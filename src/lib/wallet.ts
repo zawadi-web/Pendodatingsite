@@ -28,23 +28,32 @@ export async function createWalletTransaction(
   const wallet = await getOrCreateWallet(userId);
   
   if (status === 'SUCCESS') {
-    const newBalance = wallet.balance + amount;
-    const newCoins = wallet.coins + coins;
-    
-    if (newBalance < 0) {
-      throw new Error('Insufficient wallet balance.');
+    // Build query filter dynamically to prevent negative balance or coins.
+    const where: any = { id: wallet.id };
+    if (amount < 0) {
+      where.balance = { gte: -amount };
     }
-    if (newCoins < 0) {
-      throw new Error('Insufficient coins.');
+    if (coins < 0) {
+      where.coins = { gte: -coins };
     }
-    
-    await prisma.wallet.update({
-      where: { id: wallet.id },
+
+    const updateResult = await prisma.wallet.updateMany({
+      where,
       data: {
-        balance: newBalance,
-        coins: newCoins,
+        balance: { increment: amount },
+        coins: { increment: coins },
       },
     });
+
+    if (updateResult.count === 0) {
+      if (amount < 0 && wallet.balance < -amount) {
+        throw new Error('Insufficient wallet balance.');
+      }
+      if (coins < 0 && wallet.coins < -coins) {
+        throw new Error('Insufficient coins.');
+      }
+      throw new Error('Transaction failed due to insufficient funds.');
+    }
   }
   
   return await prisma.transaction.create({

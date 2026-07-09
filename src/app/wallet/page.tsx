@@ -135,8 +135,9 @@ export default function WalletPage() {
   };
 
   const copyAccount = () => {
-    if (sysConfig?.saccoAccount) {
-      navigator.clipboard.writeText(sysConfig.saccoAccount);
+    const textToCopy = sysConfig?.saccoAccNo || '';
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -273,7 +274,7 @@ export default function WalletPage() {
                   <p className="text-[var(--text-muted)] text-sm max-w-xs">
                     {simulateStatus === 'SUCCESS'
                       ? `Successfully credited ${selectedPack.coins + selectedPack.bonus} coins to your wallet.`
-                      : 'Check your phone for the M-Pesa prompt. Your coins will be credited automatically.'}
+                      : `Check your phone for the M-Pesa prompt to pay KES ${selectedPack.price} to Tower Sacco. Your coins will be credited automatically.`}
                   </p>
 
                   {isSimulated && simulateStatus !== 'SUCCESS' && (
@@ -302,15 +303,20 @@ export default function WalletPage() {
               ) : (
                 <>
                   {/* SACCO Account Info */}
-                  {sysConfig?.saccoName && (
+                  {sysConfig?.saccoAccName && (
                     <div className="bg-amber-950/20 border border-amber-800/30 rounded-xl p-4 space-y-2">
-                      <p className="text-xs text-amber-400 font-bold uppercase">Payment goes to Platform SACCO</p>
+                      <p className="text-xs text-amber-400 font-bold uppercase">Payment goes to {sysConfig.saccoAccName}</p>
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-bold text-white">{sysConfig.saccoName}</p>
-                          <p className="text-xs text-[var(--text-muted)]">{sysConfig.saccoAccount}</p>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-white">{sysConfig.saccoAccName}</p>
+                          <p className="text-xs text-[var(--text-muted)] font-semibold mt-0.5">Paybill: {sysConfig.saccoAccNo}</p>
+                          {sysConfig.saccoInstructions && (
+                            <p className="text-xs text-[var(--text-muted)] mt-2 whitespace-pre-line bg-black/20 p-2.5 rounded-lg border border-white/5">
+                              {sysConfig.saccoInstructions}
+                            </p>
+                          )}
                         </div>
-                        <button onClick={copyAccount} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-[var(--text-muted)] hover:text-white">
+                        <button onClick={copyAccount} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-[var(--text-muted)] hover:text-white self-start ml-2">
                           {copied ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>

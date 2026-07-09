@@ -1,37 +1,107 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { hashPassword, generateToken } from '@/lib/auth';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { email, password, name, dob, gender, preference } = body;
-
-    if (!email || !password || !name || !dob || !gender || !preference) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    // 1. IP-Based Rate Limiting (max 5 registrations per minute)
+    const ip = getClientIp(request);
+    const limitResult = rateLimit(ip, 5, 60 * 1000);
+    if (!limitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
     }
 
-    // Check if user already exists
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid registration details.' }, { status: 400 });
+    }
+
+    const { email, password, name, dob, gender, preference } = body ?? {};
+
+    // 2. Server-side validation and cleaning
+    if (
+      typeof email !== 'string' ||
+      typeof password !== 'string' ||
+      typeof name !== 'string' ||
+      typeof dob !== 'string' ||
+      typeof gender !== 'string' ||
+      typeof preference !== 'string'
+    ) {
+      return NextResponse.json({ error: 'Invalid registration details.' }, { status: 400 });
+    }
+
+    // Clean inputs
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || cleanEmail.length > 255 || !emailRegex.test(cleanEmail)) {
+      return NextResponse.json({ error: 'Invalid registration details.' }, { status: 400 });
+    }
+
+    // Validate password (8 to 100 chars)
+    if (password.length < 8 || password.length > 100) {
+      return NextResponse.json({ error: 'Invalid registration details.' }, { status: 400 });
+    }
+
+    // Validate name (2 to 50 chars, safe characters only to prevent XSS/injection)
+    const nameRegex = /^[a-zA-Z\s'-]+$/;
+    if (cleanName.length < 2 || cleanName.length > 50 || !nameRegex.test(cleanName)) {
+      return NextResponse.json({ error: 'Invalid registration details.' }, { status: 400 });
+    }
+
+    // Validate DOB (must be at least 18 and at most 120 years old)
+    const birthDate = new Date(dob);
+    if (isNaN(birthDate.getTime())) {
+      return NextResponse.json({ error: 'Invalid registration details.' }, { status: 400 });
+    }
+    
+    const eighteenYearsAgo = new Date();
+    eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
+    const hundredTwentyYearsAgo = new Date();
+    hundredTwentyYearsAgo.setFullYear(hundredTwentyYearsAgo.getFullYear() - 120);
+
+    if (birthDate > eighteenYearsAgo || birthDate < hundredTwentyYearsAgo) {
+      return NextResponse.json({ error: 'Invalid registration details.' }, { status: 400 });
+    }
+
+    // Validate gender and preference options
+    const validGenders = ['MALE', 'FEMALE', 'NON_BINARY', 'OTHER'];
+    const validPreferences = ['MALE', 'FEMALE', 'BOTH'];
+
+    if (!validGenders.includes(gender) || !validPreferences.includes(preference)) {
+      return NextResponse.json({ error: 'Invalid registration details.' }, { status: 400 });
+    }
+
+    // 3. Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: cleanEmail },
+      select: { id: true },
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'User already exists' }, { status: 400 });
+      return NextResponse.json({ error: 'An account with this email already exists' }, { status: 400 });
     }
 
-    // Hash the password
+    // 4. Hash the password
     const passwordHash = await hashPassword(password);
 
-    // Create the user and their associated profile, wallet, and chat restrictions
+    // 5. Create user + profile + wallet in one transaction
     const newUser = await prisma.user.create({
       data: {
-        email,
+        email: cleanEmail,
         passwordHash,
         profile: {
           create: {
-            name,
-            dob: new Date(dob),
+            name: cleanName,
+            dob: birthDate,
             gender,
             preference,
             interests: '',
@@ -42,24 +112,21 @@ export async function POST(request: Request) {
           create: {
             balance: 0.0,
             coins: 0,
-          }
+          },
         },
-        chatRestriction: {
-          create: {
-            warningsCount: 0,
-            isBanned: false,
-          }
-        }
       },
+      select: { id: true, email: true, role: true },
     });
 
     // Generate session token
-    const token = generateToken({ id: newUser.id, email: newUser.email, role: newUser.role });
+    const token = generateToken({
+      id: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+    });
 
-    // In a real production app, you might set this as an HTTP-only cookie
-    // For our API, we'll return it for the frontend to manage (or set cookie headers directly)
     const response = NextResponse.json({
-      message: 'User registered successfully',
+      message: 'Account created successfully',
       user: { id: newUser.id, email: newUser.email },
     });
 
@@ -74,8 +141,15 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    // Prisma unique constraint violation
+    if (error?.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'An account with this email already exists' },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
 }

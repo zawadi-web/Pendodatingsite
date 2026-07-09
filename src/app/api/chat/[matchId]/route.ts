@@ -73,14 +73,21 @@ export async function GET(
     const requiresUnlock = !isPremiumUser && !isUnlocked;
 
     return NextResponse.json({
-      messages,
+      // If the profile is locked, don't expose any message content — security hardening
+      messages: requiresUnlock ? [] : messages,
       requiresUnlock,
       otherUser: {
         id: otherUser?.id,
         name: otherUser?.profile?.name,
-        photos: otherUser?.profile?.photos,
+        // Only expose photos if unlocked or premium
+        photos: requiresUnlock ? null : otherUser?.profile?.photos,
         isVerified: otherUser?.profile?.isVerified,
         isPremium: otherUser?.profile?.isPremium,
+        lastActiveAt: otherUser?.lastActiveAt,
+        phone: isPremiumUser ? otherUser?.phone : null,
+        instagram: isPremiumUser ? otherUser?.profile?.instagram : null,
+        facebook: isPremiumUser ? otherUser?.profile?.facebook : null,
+        telegram: isPremiumUser ? otherUser?.profile?.telegram : null,
       },
     });
   } catch (error) {
@@ -139,8 +146,10 @@ export async function POST(
       return NextResponse.json({ error: 'You are permanently banned from chatting due to safety violations.' }, { status: 403 });
     }
 
+    const isPremiumUser = await checkPremiumStatus(currentUserId);
+
     // 3. Scan for contact sharing bypass attempts
-    if (content && CONTACT_REGEX.test(content)) {
+    if (!isPremiumUser && content && CONTACT_REGEX.test(content)) {
       const newWarningsCount = restriction.warningsCount + 1;
       const shouldBan = newWarningsCount >= 3;
 
@@ -162,7 +171,6 @@ export async function POST(
     }
 
     // 4. Enforce Profile Unlock block (must unlock target profile to chat)
-    const isPremiumUser = await checkPremiumStatus(currentUserId);
     const isUnlocked = await prisma.profileUnlock.findUnique({
       where: {
         userId_targetUserId: {

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart } from 'lucide-react';
+import { Heart, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
   const router = useRouter();
@@ -17,9 +17,25 @@ export default function Register() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Maximum date allowed for DOB (must be 18+)
+  const maxDob = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString().split('T')[0];
+  })();
+
+  const handleChange =
+    (field: keyof typeof formData) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+      if (error) setError(''); // clear error on any new input
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // prevent double-submit
     setError('');
     setLoading(true);
 
@@ -33,7 +49,7 @@ export default function Register() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
+        throw new Error(data.error || 'Registration failed. Please try again.');
       }
 
       router.push('/dashboard');
@@ -47,75 +63,109 @@ export default function Register() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--primary)] blur-[100px] opacity-20 pointer-events-none" />
-      
+
       <div className="pendo-card w-full max-w-md relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-full bg-[rgba(255,51,102,0.1)] flex items-center justify-center mb-4">
-            <Heart className="w-6 h-6 text-[var(--primary)]" />
-          </div>
+          <img 
+            src="/pendo_seductive_logo.png" 
+            alt="Pendo Logo" 
+            className="w-16 h-16 object-contain rounded-2xl shadow-xl border border-[var(--primary)]/30 mb-4 animate-pulse"
+            style={{ animationDuration: '3s' }}
+          />
           <h2 className="text-3xl font-bold">Join Pendo</h2>
-          <p className="text-[var(--text-muted)] text-sm mt-2">Create your account to start matching</p>
+          <p className="text-[var(--text-muted)] text-sm mt-2">
+            Create your account to start matching
+          </p>
         </div>
 
         {error && (
-          <div className="bg-[var(--error)]/10 text-[var(--error)] p-3 rounded-lg text-sm mb-6 border border-[var(--error)]/20">
+          <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm mb-6 border border-red-500/20">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label className="pendo-label">Full Name</label>
             <input
+              id="reg-name"
               type="text"
               required
+              autoComplete="name"
               className="pendo-input"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={handleChange('name')}
+              disabled={loading}
             />
           </div>
 
           <div>
             <label className="pendo-label">Email</label>
             <input
+              id="reg-email"
               type="email"
               required
+              autoComplete="email"
               className="pendo-input"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={handleChange('email')}
+              disabled={loading}
             />
           </div>
 
           <div>
-            <label className="pendo-label">Password</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              className="pendo-input"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            />
+            <label className="pendo-label">
+              Password{' '}
+              <span className="text-[var(--text-muted)] font-normal">(min 8 characters)</span>
+            </label>
+            <div className="relative">
+              <input
+                id="reg-password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="pendo-input pr-11"
+                value={formData.password}
+                onChange={handleChange('password')}
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-white transition-colors"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <div>
             <label className="pendo-label">Date of Birth</label>
             <input
+              id="reg-dob"
               type="date"
               required
+              max={maxDob}
               className="pendo-input"
               value={formData.dob}
-              onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+              onChange={handleChange('dob')}
+              disabled={loading}
             />
+            <p className="text-[var(--text-muted)] text-xs mt-1">You must be at least 18 years old</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="pendo-label">I am a</label>
               <select
+                id="reg-gender"
                 className="pendo-input bg-[var(--surface)] text-white"
                 value={formData.gender}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                onChange={handleChange('gender')}
+                disabled={loading}
               >
                 <option value="MALE" className="text-black bg-white">Man</option>
                 <option value="FEMALE" className="text-black bg-white">Woman</option>
@@ -126,9 +176,11 @@ export default function Register() {
             <div>
               <label className="pendo-label">Looking for</label>
               <select
+                id="reg-preference"
                 className="pendo-input bg-[var(--surface)] text-white"
                 value={formData.preference}
-                onChange={(e) => setFormData({ ...formData, preference: e.target.value })}
+                onChange={handleChange('preference')}
+                disabled={loading}
               >
                 <option value="FEMALE" className="text-black bg-white">Women</option>
                 <option value="MALE" className="text-black bg-white">Men</option>
@@ -137,8 +189,19 @@ export default function Register() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="pendo-btn w-full mt-6">
-            {loading ? 'Creating Account...' : 'Create Account'}
+          <button
+            type="submit"
+            disabled={loading}
+            className="pendo-btn w-full mt-6 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Creating Account…
+              </>
+            ) : (
+              'Create Account'
+            )}
           </button>
         </form>
 

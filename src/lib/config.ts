@@ -1,9 +1,9 @@
 import prisma from './db';
 
 export const DEFAULT_CONFIG = {
-  saccoAccName: "Pendo SACCO Account",
-  saccoAccNo: "174379",
-  saccoInstructions: "1. Go to Lipa na M-Pesa. 2. Select Paybill. 3. Enter Business Number 174379. 4. Enter Account Number: Your Phone Number. 5. Enter Amount and PIN.",
+  saccoAccName: "Tower Sacco",
+  saccoAccNo: "506900",
+  saccoInstructions: "1. Go to Lipa na M-Pesa. 2. Select Paybill. 3. Enter Business Number 506900. 4. Enter Account Number: 0026005020010444. 5. Enter Amount and PIN.",
   saccoEnabled: true,
   profileUnlockFee: 200.0,
   mediaUnlockFee: 100.0,
@@ -17,7 +17,7 @@ export const DEFAULT_CONFIG = {
   mpesaConsumerKey: "",
   mpesaConsumerSecret: "",
   mpesaPasskey: "",
-  mpesaShortCode: "",
+  mpesaShortCode: "506900",
   mpesaCallbackUrl: "",
 };
 

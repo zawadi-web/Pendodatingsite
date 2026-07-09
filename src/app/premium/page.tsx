@@ -151,22 +151,6 @@ export default function PremiumPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to initiate payment');
 
-      // If the STK push uses a generic checkoutID, we need to update payment with our plan-encoded ID
-      // So we use the planType to create a proper SUB-prefixed ID for the simulate callback
-      const finalCheckoutID = accountRef; // we'll use this for simulation
-
-      // Create the payment record with the SUB-prefixed ID via the premium/buy endpoint
-      const buyRes = await fetch('/api/premium/buy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          planType: selectedPlan.id,
-          payMethod: 'MPESA',
-          phoneNumber,
-          checkoutRequestID: data.checkoutRequestID || accountRef,
-        }),
-      });
-
       setCheckoutID(data.checkoutRequestID || accountRef);
       setIsSimulated(data.simulated ?? true);
       setPayStatus('WAITING');
@@ -461,7 +445,7 @@ export default function PremiumPage() {
                     </button>
 
                     <p className="text-center text-xs text-[var(--text-muted)]">
-                      Secured via Safaricom Daraja API · SACCO-routed payment
+                      Secured via Safaricom Daraja API · Routed to Tower Sacco (Paybill 506900)
                     </p>
                   </form>
                 </>
@@ -487,7 +471,7 @@ export default function PremiumPage() {
                     <h3 className="text-2xl font-bold text-white mb-2">Check Your Phone</h3>
                     <p className="text-[var(--text-muted)] text-sm max-w-xs mx-auto leading-relaxed">
                       An M-Pesa PIN prompt was sent to <span className="text-white font-bold">{phoneNumber}</span>.
-                      Enter your PIN to pay <span className="text-[var(--premium)] font-bold">KES {selectedPlan.price}</span>.
+                      Enter your PIN to pay <span className="text-[var(--premium)] font-bold">KES {selectedPlan.price}</span> to <span className="text-amber-400 font-bold">Tower Sacco</span>.
                     </p>
                   </div>
 

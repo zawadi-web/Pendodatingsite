@@ -20,6 +20,28 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Free demo deployment (recommended)
+
+For a client demo, the simplest free setup is:
+
+1. Push the project to GitHub.
+2. Create a free Vercel account and import the repo.
+3. Use a free Neon Postgres database and set the connection string as DATABASE_URL.
+4. Add Cloudinary credentials for profile image uploads, or leave the app in local-upload fallback mode for a very basic demo.
+5. Deploy and use the Vercel-generated subdomain for the presentation.
+
+Required environment variables:
+
+- DATABASE_URL
+- JWT_SECRET
+- NEXT_PUBLIC_APP_URL
+- STORAGE_PROVIDER=cloudinary (recommended)
+- CLOUDINARY_CLOUD_NAME
+- CLOUDINARY_API_KEY
+- CLOUDINARY_API_SECRET
+
+This avoids buying hosting or a custom domain for the demo.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

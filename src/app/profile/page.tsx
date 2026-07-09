@@ -7,6 +7,7 @@ import {
   User, MapPin, Sparkles, ShieldCheck, Upload, Trash2, Edit3,
   Plus, Camera, Video, Lock, AlertCircle, CheckCircle2, Info
 } from 'lucide-react';
+import { KENYAN_LOCATIONS, getNearestKenyanCity } from '@/lib/locations';
 
 const MAX_PHOTOS = 2;
 const MAX_VIDEOS = 2;
@@ -23,6 +24,9 @@ export default function ProfilePage() {
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [detectingLocation, setDetectingLocation] = useState(false);
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('MALE');
   const [preference, setPreference] = useState('FEMALE');
@@ -32,6 +36,12 @@ export default function ProfilePage() {
   const [customInterest, setCustomInterest] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+
+  // Phone & Socials
+  const [phone, setPhone] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [facebook, setFacebook] = useState('');
+  const [telegram, setTelegram] = useState('');
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -48,14 +58,20 @@ export default function ProfilePage() {
         if (res.ok) {
           const data = await res.json();
           setUser(data);
+          setPhone(data.phone || '');
           const prof = data.profile;
           if (prof) {
             setName(prof.name || '');
             setBio(prof.bio || '');
             setLocation(prof.location || '');
+            setLatitude(prof.latitude || null);
+            setLongitude(prof.longitude || null);
             setDob(prof.dob ? prof.dob.split('T')[0] : '');
             setGender(prof.gender || 'MALE');
             setPreference(prof.preference || 'FEMALE');
+            setInstagram(prof.instagram || '');
+            setFacebook(prof.facebook || '');
+            setTelegram(prof.telegram || '');
             if (prof.interests) {
               setInterestsList(prof.interests.split(',').filter((i: string) => i.trim() !== ''));
             }
@@ -182,6 +198,41 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser.');
+      return;
+    }
+    setDetectingLocation(true);
+    setError('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude: lat, longitude: lng } = position.coords;
+        setLatitude(lat);
+        setLongitude(lng);
+        const nearest = getNearestKenyanCity(lat, lng);
+        if (nearest) {
+          setLocation(nearest.name);
+          setSuccess(`Detected location near ${nearest.name}! 📍`);
+        }
+        setDetectingLocation(false);
+      },
+      (err) => {
+        // Use warn, not error — denial is expected user behaviour, not an app crash.
+        const messages: Record<number, string> = {
+          1: 'Location access was denied. Please select your location manually.',
+          2: 'Location unavailable. Please select manually.',
+          3: 'Location request timed out. Please select manually.',
+        };
+        const msg = messages[err.code] || 'Could not detect location. Please select manually.';
+        console.warn('[Location]', msg, err.code);
+        setError(msg);
+        setDetectingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -197,6 +248,12 @@ export default function ProfilePage() {
           dob: dob || undefined,
           interests: interestsList.join(','),
           photos: allMedia,
+          latitude,
+          longitude,
+          phone,
+          instagram,
+          facebook,
+          telegram,
         }),
       });
       const data = await res.json();
@@ -483,14 +540,40 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="pendo-label">Location (City/Town)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Nairobi, Mombasa"
-                      className="pendo-input"
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="pendo-label mb-0">Location (City/Town/Area)</label>
+                      <button
+                        type="button"
+                        onClick={handleDetectLocation}
+                        disabled={detectingLocation}
+                        className="text-xs font-bold text-[var(--primary)] hover:underline flex items-center gap-1"
+                      >
+                        {detectingLocation ? 'Detecting...' : '📍 Detect GPS'}
+                      </button>
+                    </div>
+                    <select
+                      className="pendo-input bg-[var(--surface)] text-white"
                       value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                    />
+                      onChange={(e) => {
+                        const locName = e.target.value;
+                        setLocation(locName);
+                        const matched = KENYAN_LOCATIONS.find(l => l.name === locName);
+                        if (matched) {
+                          setLatitude(matched.latitude);
+                          setLongitude(matched.longitude);
+                        } else {
+                          setLatitude(null);
+                          setLongitude(null);
+                        }
+                      }}
+                    >
+                      <option value="">Select location...</option>
+                      {KENYAN_LOCATIONS.map((loc) => (
+                        <option key={loc.name} value={loc.name} className="text-black bg-white">
+                          {loc.name} ({loc.city})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -509,6 +592,63 @@ export default function ProfilePage() {
                         <option value="MALE" className="text-black bg-white">Men</option>
                         <option value="BOTH" className="text-black bg-white">Everyone</option>
                       </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact & Socials */}
+                <div className="p-5 rounded-2xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-4">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[var(--premium)] fill-current animate-pulse" />
+                    Contact & Social Media (Premium Visible)
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Only premium subscribers can view these contact details. Add yours so premium users can contact you directly!
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="pendo-label">Phone Number</label>
+                      <input
+                        type="tel"
+                        className="pendo-input"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="e.g. 0712345678"
+                      />
+                    </div>
+                    <div>
+                      <label className="pendo-label">Instagram Username</label>
+                      <input
+                        type="text"
+                        className="pendo-input"
+                        value={instagram}
+                        onChange={(e) => setInstagram(e.target.value)}
+                        placeholder="e.g. @username"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="pendo-label">Telegram Username</label>
+                      <input
+                        type="text"
+                        className="pendo-input"
+                        value={telegram}
+                        onChange={(e) => setTelegram(e.target.value)}
+                        placeholder="e.g. telegram_username"
+                      />
+                    </div>
+                    <div>
+                      <label className="pendo-label">Facebook Username / link</label>
+                      <input
+                        type="text"
+                        className="pendo-input"
+                        value={facebook}
+                        onChange={(e) => setFacebook(e.target.value)}
+                        placeholder="e.g. facebook_username"
+                      />
                     </div>
                   </div>
                 </div>

@@ -4,6 +4,12 @@ import { createWalletTransaction } from '@/lib/wallet';
 
 export async function POST(request: Request) {
   try {
+    // Block simulator callback in production
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('Blocked simulated M-Pesa callback in production environment.');
+      return NextResponse.json({ error: 'Payment simulation is disabled in production.' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { checkoutRequestID, status } = body;
 

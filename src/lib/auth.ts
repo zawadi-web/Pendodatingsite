@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-development-only';
 
 export const hashPassword = async (password: string) => {
-  return await bcrypt.hash(password, 10);
+  return await bcrypt.hash(password, 12);
 };
 
 export const comparePassword = async (password: string, hash: string) => {

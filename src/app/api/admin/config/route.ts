@@ -7,6 +7,25 @@ import { getSystemConfig } from '@/lib/config';
 export async function GET() {
   try {
     const config = await getSystemConfig();
+    
+    // Check if user is admin to decide if we should expose keys
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth_token');
+    let isAdmin = false;
+    if (token) {
+      const decoded = verifyToken(token.value) as any;
+      if (decoded && decoded.role === 'ADMIN') {
+        isAdmin = true;
+      }
+    }
+
+    // Sanitize sensitive info for public/non-admin requests
+    if (!isAdmin) {
+      config.mpesaConsumerKey = null;
+      config.mpesaConsumerSecret = null;
+      config.mpesaPasskey = null;
+    }
+
     return NextResponse.json({ config });
   } catch (error) {
     console.error('Fetch system config error:', error);

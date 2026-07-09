@@ -29,6 +29,27 @@ export default function AdminDashboard() {
   const [configSaved, setConfigSaved] = useState(false);
   const [configError, setConfigError] = useState('');
 
+  // Detailed User Viewer Modal States
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [editCoins, setEditCoins] = useState<number>(0);
+  const [editBalance, setEditBalance] = useState<number>(0);
+  const [editWarnings, setEditWarnings] = useState<number>(0);
+  const [editVerified, setEditVerified] = useState<boolean>(false);
+  const [editPremium, setEditPremium] = useState<boolean>(false);
+  const [editSuspended, setEditSuspended] = useState<boolean>(false);
+  const [updatingUser, setUpdatingUser] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (selectedUser) {
+      setEditCoins(selectedUser.wallet?.coins ?? 0);
+      setEditBalance(selectedUser.wallet?.balance ?? 0);
+      setEditWarnings(selectedUser.chatRestriction?.warningsCount ?? 0);
+      setEditVerified(selectedUser.profile?.isVerified ?? false);
+      setEditPremium(selectedUser.profile?.isPremium ?? false);
+      setEditSuspended(selectedUser.isSuspended ?? false);
+    }
+  }, [selectedUser]);
+
   useEffect(() => {
     const checkSession = async () => {
       const res = await fetch('/api/auth/session');
@@ -138,6 +159,38 @@ export default function AdminDashboard() {
       body: JSON.stringify({ targetUserId, adjustCoins: amount, description }),
     });
     if (res.ok) fetchAdminData();
+  };
+
+  const handleUpdateUserDetails = async () => {
+    if (!selectedUser) return;
+    setUpdatingUser(true);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUserId: selectedUser.id,
+          walletBalance: editBalance,
+          walletCoins: editCoins,
+          warningsCount: editWarnings,
+          isVerified: editVerified,
+          isPremium: editPremium,
+          isSuspended: editSuspended,
+        }),
+      });
+      if (res.ok) {
+        await fetchAdminData();
+        setSelectedUser(null);
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to update user details.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error occurred.');
+    } finally {
+      setUpdatingUser(false);
+    }
   };
 
   const handleSaveConfig = async () => {
@@ -507,40 +560,48 @@ export default function AdminDashboard() {
                               </div>
                             </td>
                             <td className="p-4 text-right">
-                              {u.role !== 'ADMIN' && (
-                                <div className="flex gap-1.5 justify-end flex-wrap">
-                                  <button
-                                    onClick={() => handleToggleUserVerify(u.id, u.profile?.isVerified)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
-                                      u.profile?.isVerified
-                                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                    }`}
-                                  >
-                                    {u.profile?.isVerified ? 'Unverify' : 'Verify'}
-                                  </button>
-                                  <button
-                                    onClick={() => handleTogglePremium(u.id, u.profile?.isPremium)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
-                                      u.profile?.isPremium
-                                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                        : 'bg-amber-600 text-white hover:bg-amber-700'
-                                    }`}
-                                  >
-                                    {u.profile?.isPremium ? 'Remove ✨' : 'Grant ✨'}
-                                  </button>
-                                  <button
-                                    onClick={() => handleToggleUserSuspend(u.id, u.isSuspended)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
-                                      u.isSuspended
-                                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                        : 'bg-rose-950/60 text-rose-400 border border-rose-800/40 hover:bg-rose-900/60'
-                                    }`}
-                                  >
-                                    {u.isSuspended ? 'Lift Ban' : 'Ban'}
-                                  </button>
-                                </div>
-                              )}
+                              <div className="flex gap-1.5 justify-end flex-wrap">
+                                <button
+                                  onClick={() => setSelectedUser(u)}
+                                  className="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-purple-950/60 text-purple-400 border border-purple-800/40 hover:bg-purple-900/60 flex items-center gap-1"
+                                >
+                                  <Eye className="w-3.5 h-3.5" /> View
+                                </button>
+                                {u.role !== 'ADMIN' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleToggleUserVerify(u.id, u.profile?.isVerified)}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                                        u.profile?.isVerified
+                                          ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                      }`}
+                                    >
+                                      {u.profile?.isVerified ? 'Unverify' : 'Verify'}
+                                    </button>
+                                    <button
+                                      onClick={() => handleTogglePremium(u.id, u.profile?.isPremium)}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                                        u.profile?.isPremium
+                                          ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                          : 'bg-amber-600 text-white hover:bg-amber-700'
+                                      }`}
+                                    >
+                                      {u.profile?.isPremium ? 'Remove ✨' : 'Grant ✨'}
+                                    </button>
+                                    <button
+                                      onClick={() => handleToggleUserSuspend(u.id, u.isSuspended)}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                                        u.isSuspended
+                                          ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                          : 'bg-rose-950/60 text-rose-400 border border-rose-800/40 hover:bg-rose-900/60'
+                                      }`}
+                                    >
+                                      {u.isSuspended ? 'Lift Ban' : 'Ban'}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -771,6 +832,257 @@ export default function AdminDashboard() {
         )}
 
       </main>
+
+      {/* User Details Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-[var(--surface)] border border-white/10 rounded-3xl shadow-2xl p-6 md:p-8 space-y-6">
+            {/* Close button */}
+            <button
+              onClick={() => setSelectedUser(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 transition text-[var(--text-muted)] hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal Header */}
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              {/* Avatar / Photos Grid */}
+              <div className="w-full md:w-1/3 space-y-3">
+                <div className="aspect-square w-full rounded-2xl overflow-hidden bg-[var(--surface-hover)] border border-[var(--border)] relative">
+                  {(() => {
+                    try {
+                      const photos = JSON.parse(selectedUser.profile?.photos || '[]');
+                      if (photos.length > 0) {
+                        return (
+                          <div className="grid grid-cols-1 gap-2 h-full">
+                            <img src={photos[0]} alt="Primary Photo" className="w-full h-full object-cover" />
+                          </div>
+                        );
+                      }
+                    } catch {}
+                    return (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500">
+                        <Users className="w-12 h-12" />
+                      </div>
+                    );
+                  })()}
+                </div>
+                {/* Photo Gallery Row */}
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {(() => {
+                    try {
+                      const photos = JSON.parse(selectedUser.profile?.photos || '[]');
+                      if (photos.length > 1) {
+                        return photos.slice(1).map((photo: string, idx: number) => (
+                          <a href={photo} target="_blank" rel="noreferrer" key={idx} className="w-12 h-12 rounded-lg overflow-hidden border border-[var(--border)] flex-shrink-0">
+                            <img src={photo} alt={`Photo ${idx + 2}`} className="w-full h-full object-cover" />
+                          </a>
+                        ));
+                      }
+                    } catch {}
+                    return null;
+                  })()}
+                </div>
+              </div>
+
+              {/* Profile Key info */}
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-2xl font-black text-white">{selectedUser.profile?.name || 'No Profile Created'}</h2>
+                  {selectedUser.profile?.isVerified && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-0.5">
+                      <Check className="w-3 h-3" /> Verified
+                    </span>
+                  )}
+                  {selectedUser.profile?.isPremium && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-[var(--premium)] text-[10px] font-bold uppercase tracking-wider flex items-center gap-0.5">
+                      <Crown className="w-3 h-3" /> Premium
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm bg-white/5 border border-white/5 rounded-2xl p-4">
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Email Address</p>
+                    <p className="font-semibold text-white select-all">{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Phone Number</p>
+                    <p className="font-semibold text-white">{selectedUser.profile?.phone || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Gender / Preference</p>
+                    <p className="font-semibold text-white">
+                      {selectedUser.profile?.gender || 'N/A'} · Wants {selectedUser.profile?.preference || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Location</p>
+                    <p className="font-semibold text-white">{selectedUser.profile?.location || 'N/A'}</p>
+                  </div>
+                </div>
+
+                {selectedUser.profile?.bio && (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)] mb-1">Biography</p>
+                    <p className="text-sm text-gray-300 leading-relaxed bg-[var(--surface-hover)] p-3 rounded-xl border border-[var(--border)] italic">
+                      "{selectedUser.profile.bio}"
+                    </p>
+                  </div>
+                )}
+
+                {selectedUser.profile?.interests && (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)] mb-1.5">Interests / Tags</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedUser.profile.interests.split(',').map((tag: string, i: number) => (
+                        <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 font-medium border border-purple-500/5">
+                          {tag.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Admin Management Section */}
+            <div className="border-t border-[var(--border)] pt-6 space-y-4">
+              <h3 className="font-bold text-white flex items-center gap-1.5">
+                <Shield className="w-5 h-5 text-purple-500" /> Admin Moderation & Control Panel
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Status controls */}
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-3">
+                  <p className="text-xs font-bold text-white uppercase tracking-wider mb-2">Member Status</p>
+                  
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={editVerified}
+                      onChange={(e) => setEditVerified(e.target.checked)}
+                    />
+                    <div className="w-9 h-5 rounded-full bg-gray-700 peer-checked:bg-emerald-600 transition-colors relative">
+                      <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform peer-checked:translate-x-4 shadow" />
+                    </div>
+                    <span className="text-xs font-bold text-white">Verified Badge</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={editPremium}
+                      onChange={(e) => setEditPremium(e.target.checked)}
+                    />
+                    <div className="w-9 h-5 rounded-full bg-gray-700 peer-checked:bg-amber-600 transition-colors relative">
+                      <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform peer-checked:translate-x-4 shadow" />
+                    </div>
+                    <span className="text-xs font-bold text-white">Premium Membership</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={editSuspended}
+                      onChange={(e) => setEditSuspended(e.target.checked)}
+                    />
+                    <div className="w-9 h-5 rounded-full bg-gray-700 peer-checked:bg-rose-600 transition-colors relative">
+                      <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform peer-checked:translate-x-4 shadow" />
+                    </div>
+                    <span className="text-xs font-bold text-white">Suspended / Banned</span>
+                  </label>
+                </div>
+
+                {/* Financial Controls */}
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-3">
+                  <p className="text-xs font-bold text-white uppercase tracking-wider mb-2">Wallet Balances</p>
+                  
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-[var(--text-muted)] block mb-1">Wallet Coins</label>
+                    <div className="flex items-center gap-2">
+                      <Coins className="w-4 h-4 text-amber-500" />
+                      <input
+                        type="number"
+                        className="pendo-input py-1 text-xs text-white"
+                        value={editCoins}
+                        onChange={(e) => setEditCoins(parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-[var(--text-muted)] block mb-1">Wallet Balance (KES)</label>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-emerald-500" />
+                      <input
+                        type="number"
+                        className="pendo-input py-1 text-xs text-white"
+                        value={editBalance}
+                        onChange={(e) => setEditBalance(parseFloat(e.target.value) || 0.0)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chat / Warnings */}
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-3">
+                  <p className="text-xs font-bold text-white uppercase tracking-wider mb-2">Chat Restrictions</p>
+                  
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-[var(--text-muted)] block mb-1">Warnings Received</label>
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-500" />
+                      <input
+                        type="number"
+                        min="0"
+                        max="3"
+                        className="pendo-input py-1 text-xs text-white"
+                        value={editWarnings}
+                        onChange={(e) => setEditWarnings(parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+                    Users are auto-suspended from the messaging gateway at 3 warnings for safety violations.
+                  </p>
+                </div>
+              </div>
+
+              {/* System details metadata */}
+              <div className="flex justify-between items-center bg-black/20 p-3 rounded-xl text-[10px] text-[var(--text-muted)]">
+                <span>Registered: {new Date(selectedUser.createdAt).toLocaleString()}</span>
+                <span>Last Active: {new Date(selectedUser.lastActiveAt).toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold bg-gray-800 hover:bg-gray-700 text-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateUserDetails}
+                disabled={updatingUser}
+                className="px-5 py-2.5 rounded-xl text-sm font-black bg-purple-600 hover:bg-purple-700 text-white transition flex items-center gap-2 shadow-lg"
+              >
+                {updatingUser ? (
+                  <><RefreshCw className="w-4 h-4 animate-spin" /> Saving...</>
+                ) : (
+                  <><Save className="w-4 h-4" /> Save User Profile</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

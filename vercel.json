@@ -1,6 +1,12 @@
 {
-  "buildCommand": "npx prisma generate && npm run build",
+  "buildCommand": "npx prisma generate && npx prisma db push --skip-generate && npm run build",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/admin/cleanup",
+      "schedule": "0 2 * * 0"
+    }
+  ]
 }
