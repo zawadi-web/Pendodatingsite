@@ -27,18 +27,10 @@ function createPrismaClient(): PrismaClient {
   }
 
   if (url.startsWith('file:')) {
-    console.warn(
-      '[Prisma] DATABASE_URL points to SQLite, but the schema is configured for PostgreSQL. ' +
-      'Falling back to a local PostgreSQL-compatible connection string for build-time compatibility.'
-    );
-
+    // ── SQLite (LibSQL / local dev) ──────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Pool } = require('pg') as typeof import('pg');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PrismaPg } = require('@prisma/adapter-pg') as typeof import('@prisma/adapter-pg');
-    const fallbackUrl = 'postgresql://postgres:postgres@localhost:5432/pendo';
-    const pool = new Pool({ connectionString: fallbackUrl });
-    const adapter = new PrismaPg(pool);
+    const { PrismaLibSql } = require('@prisma/adapter-libsql') as typeof import('@prisma/adapter-libsql');
+    const adapter = new PrismaLibSql({ url });
     return new PrismaClient({ adapter } as any);
   }
 

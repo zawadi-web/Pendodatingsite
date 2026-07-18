@@ -43,6 +43,11 @@ export default function ProfilePage() {
   const [facebook, setFacebook] = useState('');
   const [telegram, setTelegram] = useState('');
 
+  // Personality Prompts
+  const [prompts, setPrompts] = useState<{ question: string; answer: string }[]>([]);
+  const [currentPromptQuestion, setCurrentPromptQuestion] = useState('');
+  const [currentPromptAnswer, setCurrentPromptAnswer] = useState('');
+
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
@@ -90,6 +95,17 @@ export default function ProfilePage() {
             } catch {
               setPhotosList([]);
               setVideosList([]);
+            }
+            // Parse prompts
+            try {
+              if (prof.prompts) {
+                const parsed = JSON.parse(prof.prompts);
+                if (Array.isArray(parsed)) {
+                  setPrompts(parsed);
+                }
+              }
+            } catch {
+              setPrompts([]);
             }
           }
         } else {
@@ -254,6 +270,7 @@ export default function ProfilePage() {
           instagram,
           facebook,
           telegram,
+          prompts,
         }),
       });
       const data = await res.json();
@@ -663,6 +680,89 @@ export default function ProfilePage() {
                     onChange={(e) => setBio(e.target.value)}
                   />
                   <p className="text-xs text-[var(--text-muted)] mt-1">Only visible to users who unlock your profile (KES 200)</p>
+                </div>
+
+                {/* Personality Prompts */}
+                <div className="p-5 rounded-2xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-4">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[var(--premium)] fill-current animate-pulse" />
+                    Personality Prompts (Max 3)
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Answer prompts to show more of your personality on your profile. These are visible after a profile is unlocked.
+                  </p>
+
+                  {/* List of current prompts */}
+                  {prompts.length > 0 && (
+                    <div className="space-y-3">
+                      {prompts.map((p, idx) => (
+                        <div key={idx} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] relative group">
+                          <button
+                            type="button"
+                            onClick={() => setPrompts(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute top-3 right-3 text-rose-400 hover:text-rose-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <p className="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wider mb-1">{p.question}</p>
+                          <p className="text-sm text-white font-medium italic">"{p.answer}"</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Form to add a new prompt */}
+                  {prompts.length < 3 && (
+                    <div className="space-y-3 pt-2 border-t border-[var(--border)]/50">
+                      <div>
+                        <label className="pendo-label text-xs">Select a Prompt Question</label>
+                        <select
+                          className="pendo-input bg-[var(--surface)] text-white text-xs"
+                          value={currentPromptQuestion}
+                          onChange={(e) => setCurrentPromptQuestion(e.target.value)}
+                        >
+                          <option value="" className="text-black bg-white">Choose a question...</option>
+                          {[
+                            "My idea of a perfect Sunday is...",
+                            "I'm looking for someone who...",
+                            "The most spontaneous thing I've done...",
+                            "What most people don't know about me...",
+                            "I value most in a partner...",
+                            "If I could travel anywhere tomorrow, it would be...",
+                            "My absolute dealbreaker is..."
+                          ].filter(q => !prompts.some(p => p.question === q)).map(q => (
+                            <option key={q} value={q} className="text-black bg-white">{q}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="pendo-label text-xs">Your Answer</label>
+                        <textarea
+                          rows={2}
+                          placeholder="Type your answer here..."
+                          className="pendo-input resize-none text-xs"
+                          value={currentPromptAnswer}
+                          onChange={(e) => setCurrentPromptAnswer(e.target.value)}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (currentPromptQuestion && currentPromptAnswer.trim()) {
+                            setPrompts(prev => [...prev, { question: currentPromptQuestion, answer: currentPromptAnswer.trim() }]);
+                            setCurrentPromptQuestion('');
+                            setCurrentPromptAnswer('');
+                          }
+                        }}
+                        disabled={!currentPromptQuestion || !currentPromptAnswer.trim()}
+                        className="px-4 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-bold rounded-lg transition disabled:opacity-50 animate-fade-in"
+                      >
+                        Add Prompt
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Interests */}

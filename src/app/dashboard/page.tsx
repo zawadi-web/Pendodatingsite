@@ -454,6 +454,31 @@ export default function Dashboard() {
                   )}
                 </div>
 
+                {/* Personality Prompts */}
+                {selectedProfile.prompts && (() => {
+                  try {
+                    const parsed = JSON.parse(selectedProfile.prompts);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                      return (
+                        <div className="space-y-3 pt-2">
+                          <h4 className="text-xs font-bold text-white uppercase tracking-wider">Personality Prompts</h4>
+                          <div className="space-y-2">
+                            {parsed.map((p: any, idx: number) => (
+                              <div key={idx} className="p-3.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-1">
+                                <p className="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wider">{p.question}</p>
+                                <p className="text-sm text-white font-medium leading-relaxed italic">"{p.answer}"</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                  } catch (e) {
+                    return null;
+                  }
+                  return null;
+                })()}
+
                 {/* Unlocked Photo Galleries */}
                 {selectedProfile.isMediaUnlocked ? (
                   <div>

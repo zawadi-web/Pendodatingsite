@@ -77,7 +77,9 @@ model Profile {
   instagram        String?
   facebook         String?
   telegram         String?
+  prompts          String?   // JSON array of {question, answer} personality prompts
 }
+
 
 model Like {
   id        String   @id @default(cuid())

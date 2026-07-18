@@ -159,6 +159,7 @@ export async function GET(request: Request) {
         bio: isUnlocked ? m.bio : null,
         interests: isUnlocked ? m.interests : '',
         location: isUnlocked ? m.location : null,
+        prompts: isUnlocked ? m.prompts : null,
         latitude: m.latitude,
         longitude: m.longitude,
         distance: item.distance, // return distance to frontend!

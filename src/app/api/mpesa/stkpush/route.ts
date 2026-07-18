@@ -71,6 +71,12 @@ export async function POST(request: Request) {
     const shortcode = sysConfig.mpesaShortCode || process.env.MPESA_SHORTCODE || '174379'; // default sandbox paybill
     const callbackUrl = sysConfig.mpesaCallbackUrl || process.env.MPESA_CALLBACK_URL || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mpesa/callback`; // public URL for safaricom callbacks
 
+    // Dynamic check for Paybill vs Buy Goods Till
+    const tillNumber = process.env.MPESA_TILL_NUMBER || '';
+    const isTill = tillNumber.length > 0;
+    const transactionType = isTill ? 'CustomerBuyGoodsOnline' : 'CustomerPayBillOnline';
+    const partyB = isTill ? tillNumber : shortcode;
+
     let finalAccountRef = accountReference || (planType ? `PendoPremium${planType}` : 'PendoPlatform');
     if (shortcode === '506900') {
       finalAccountRef = '0026005020010444';
@@ -167,10 +173,10 @@ export async function POST(request: Request) {
             BusinessShortCode: shortcode,
             Password: password,
             Timestamp: timestamp,
-            TransactionType: 'CustomerPayBillOnline',
+            TransactionType: transactionType,
             Amount: finalAmount,
             PartyA: cleanPhone,
-            PartyB: shortcode,
+            PartyB: partyB,
             PhoneNumber: cleanPhone,
             CallBackURL: finalCallbackUrl,
             AccountReference: finalAccountRef,

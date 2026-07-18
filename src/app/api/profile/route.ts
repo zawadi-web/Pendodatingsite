@@ -46,7 +46,7 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const {
       name, bio, location, interests, gender, preference, photos,
-      latitude, longitude, phone, instagram, facebook, telegram
+      latitude, longitude, phone, instagram, facebook, telegram, prompts
     } = body;
 
     // Validate name
@@ -102,6 +102,7 @@ export async function PUT(request: Request) {
         instagram: instagram !== undefined ? (instagram ? instagram.trim() : null) : undefined,
         facebook: facebook !== undefined ? (facebook ? facebook.trim() : null) : undefined,
         telegram: telegram !== undefined ? (telegram ? telegram.trim() : null) : undefined,
+        prompts: prompts !== undefined ? (Array.isArray(prompts) ? JSON.stringify(prompts) : prompts) : undefined,
       },
     });
 
