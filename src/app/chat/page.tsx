@@ -459,8 +459,12 @@ function ChatPageInner() {
   useEffect(() => {
     if (openMatchId) {
       setSelectedMatchId(openMatchId);
+      const msg = searchParams.get('msg');
+      if (msg) {
+        setNewMessage(msg);
+      }
     }
-  }, [openMatchId]);
+  }, [openMatchId, searchParams]);
 
   useEffect(() => {
     if (selectedMatchId) {

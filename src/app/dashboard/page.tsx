@@ -128,7 +128,7 @@ export default function Dashboard() {
     );
   };
 
-  const handleStartChat = async (targetUserId: string) => {
+  const handleStartChat = async (targetUserId: string, initialMessage?: string) => {
     try {
       const res = await fetch('/api/chat/start', {
         method: 'POST',
@@ -137,7 +137,8 @@ export default function Dashboard() {
       });
       if (res.ok) {
         const data = await res.json();
-        router.push(`/chat?open=${data.matchId}`);
+        const msgParam = initialMessage ? `&msg=${encodeURIComponent(initialMessage)}` : '';
+        router.push(`/chat?open=${data.matchId}${msgParam}`);
       } else {
         console.error('Failed to start conversation');
       }
@@ -276,6 +277,15 @@ export default function Dashboard() {
   const calcAge = (dob: string) => {
     if (!dob) return '?';
     return new Date().getFullYear() - new Date(dob).getFullYear();
+  };
+
+  const calcCompatibility = (myInterestsStr: string, theirInterestsStr: string) => {
+    if (!myInterestsStr || !theirInterestsStr) return 0;
+    const myInterests = myInterestsStr.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
+    const theirInterests = theirInterestsStr.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
+    if (myInterests.length === 0) return 0;
+    const shared = myInterests.filter(i => theirInterests.includes(i));
+    return Math.round((shared.length / myInterests.length) * 100);
   };
 
   const isOnline = (lastActiveAt: string | Date | null) => {
@@ -426,6 +436,17 @@ export default function Dashboard() {
                     <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-bold uppercase">Online</span>
                   )}
                 </p>
+                {selectedProfile.compatibility > 0 && (
+                  <span className={`inline-flex mt-1.5 text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${
+                    selectedProfile.compatibility >= 70
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : selectedProfile.compatibility >= 40
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                      : 'bg-white/5 text-gray-400 border-white/10'
+                  }`}>
+                    ⚡ {selectedProfile.compatibility}% Interest Match
+                  </span>
+                )}
               </div>
             </div>
 
@@ -593,10 +614,14 @@ export default function Dashboard() {
                 <X className="w-4 h-4" /> Pass
               </button>
               <button
-                onClick={() => { handleSwipe(selectedProfile.userId, 'LIKE'); setSelectedProfile(null); }}
+                onClick={async () => {
+                  setSelectedProfile(null);
+                  await handleSwipe(selectedProfile.userId, 'LIKE');
+                  handleStartChat(selectedProfile.userId, `Hey ${selectedProfile.name}! 👋 I liked your profile, let's chat!`);
+                }}
                 className="pendo-btn flex-1 flex items-center justify-center gap-1.5"
               >
-                <Heart className="w-4 h-4 fill-current" /> Like
+                <Heart className="w-4 h-4 fill-current" /> Like & Say Hi
               </button>
             </div>
           </div>
@@ -740,15 +765,28 @@ export default function Dashboard() {
                             <Sparkles className="w-5 h-5 text-[var(--premium)] fill-current flex-shrink-0" />
                           )}
                         </div>
-                        <p className="text-xs text-gray-300 flex items-center gap-1 mt-1">
-                          <MapPin className="w-3.5 h-3.5 text-[var(--primary)]" />
-                          {profile.location || 'Nearby'}
-                          {profile.distance !== null && profile.distance !== undefined && (
-                            <span className="text-gray-400 font-medium ml-1">
-                              ({profile.distance} km away)
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <p className="text-xs text-gray-300 flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-[var(--primary)]" />
+                            {profile.location || 'Nearby'}
+                            {profile.distance !== null && profile.distance !== undefined && (
+                              <span className="text-gray-400 font-medium ml-1">
+                                ({profile.distance} km away)
+                              </span>
+                            )}
+                          </p>
+                          {profile.compatibility > 0 && (
+                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                              profile.compatibility >= 70
+                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                : profile.compatibility >= 40
+                                ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                                : 'bg-white/5 text-gray-400 border-white/10'
+                            }`}>
+                              {profile.compatibility}% Match
                             </span>
                           )}
-                        </p>
+                        </div>
                       </div>
 
                       <button
@@ -789,28 +827,31 @@ export default function Dashboard() {
                     </div>
 
                     {/* Like/Pass/Message buttons */}
-                    <div className="flex items-center justify-center gap-4">
+                    <div className="flex items-center justify-center gap-3">
                       <button
                         onClick={() => handleSwipe(profile.userId, 'PASS')}
-                        className="w-9 h-9 rounded-full bg-[var(--surface-hover)] border border-[var(--border)] flex items-center justify-center text-[var(--error)] hover:bg-[rgba(239,68,68,0.08)] hover:scale-110 active:scale-95 transition-all shadow"
+                        className="w-9 h-9 rounded-full bg-[var(--surface-hover)] border border-[var(--border)] flex items-center justify-center text-[var(--error)] hover:bg-[rgba(239,68,68,0.08)] hover:scale-110 active:scale-95 transition-all shadow flex-shrink-0"
                         title="Pass"
                       >
                         <X className="w-4 h-4" strokeWidth={3} />
                       </button>
                       <button
                         onClick={() => handleStartChat(profile.userId)}
-                        className="w-9 h-9 rounded-full bg-emerald-900/30 border border-emerald-700/40 flex items-center justify-center text-emerald-400 hover:bg-emerald-900/50 hover:scale-110 active:scale-95 transition-all shadow"
+                        className="w-9 h-9 rounded-full bg-emerald-900/30 border border-emerald-700/40 flex items-center justify-center text-emerald-400 hover:bg-emerald-900/50 hover:scale-110 active:scale-95 transition-all shadow flex-shrink-0"
                         title="Send Message"
                       >
                         <MessageCircle className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleSwipe(profile.userId, 'LIKE')}
-                        className="w-9 h-9 rounded-full bg-[var(--primary-gradient)] flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all shadow"
+                        onClick={async () => {
+                          await handleSwipe(profile.userId, 'LIKE');
+                          handleStartChat(profile.userId, `Hey ${profile.name}! 👋 I liked your profile, let's chat!`);
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[var(--primary-gradient)] text-white text-xs font-bold hover:scale-105 active:scale-95 transition-all shadow flex-shrink-0"
                         style={{ boxShadow: '0 4px 12px rgba(255, 51, 102, 0.3)' }}
-                        title="Like"
+                        title="Like & Say Hi"
                       >
-                        <Heart className="w-4 h-4 fill-current" />
+                        <Heart className="w-3.5 h-3.5 fill-current" /> Like & Say Hi
                       </button>
                     </div>
                   </div>

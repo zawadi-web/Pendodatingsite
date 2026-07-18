@@ -94,10 +94,22 @@ export async function GET(request: Request) {
         photoList = [];
       }
 
+      // Calculate interest compatibility percentage
+      const myInterests = (currentUser.profile?.interests || '')
+        .split(',').map((i: string) => i.trim().toLowerCase()).filter(Boolean);
+      const theirInterests = (m.interests || '')
+        .split(',').map((i: string) => i.trim().toLowerCase()).filter(Boolean);
+      let compatibility = 0;
+      if (myInterests.length > 0 && theirInterests.length > 0) {
+        const shared = myInterests.filter((i: string) => theirInterests.includes(i));
+        compatibility = Math.round((shared.length / myInterests.length) * 100);
+      }
+
       return {
         profile: m,
         distance,
-        photoList
+        photoList,
+        compatibility
       };
     });
 
@@ -175,6 +187,7 @@ export async function GET(request: Request) {
         instagram: isPremiumUser ? m.instagram : null,
         facebook: isPremiumUser ? m.facebook : null,
         telegram: isPremiumUser ? m.telegram : null,
+        compatibility: item.compatibility, // interest overlap percentage
       };
     });
 

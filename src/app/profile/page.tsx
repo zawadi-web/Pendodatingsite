@@ -134,17 +134,35 @@ export default function ProfilePage() {
   };
 
   const handleInterestToggle = (tag: string) => {
-    setInterestsList(prev =>
-      prev.includes(tag) ? prev.filter(i => i !== tag) : [...prev, tag]
-    );
+    setInterestsList(prev => {
+      if (prev.includes(tag)) {
+        setError('');
+        return prev.filter(i => i !== tag);
+      }
+      if (prev.length >= 10) {
+        setError('Maximum of 10 interests allowed.');
+        return prev;
+      }
+      setError('');
+      return [...prev, tag];
+    });
   };
 
   const handleAddCustomInterest = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customInterest.trim() && !interestsList.includes(customInterest.trim())) {
-      setInterestsList(prev => [...prev, customInterest.trim()]);
+    const cleanTag = customInterest.trim();
+    if (!cleanTag) return;
+    if (interestsList.includes(cleanTag)) {
       setCustomInterest('');
+      return;
     }
+    if (interestsList.length >= 10) {
+      setError('Maximum of 10 interests allowed.');
+      return;
+    }
+    setError('');
+    setInterestsList(prev => [...prev, cleanTag]);
+    setCustomInterest('');
   };
 
   const uploadFile = async (file: File, isVideo: boolean): Promise<string> => {
@@ -767,7 +785,16 @@ export default function ProfilePage() {
 
                 {/* Interests */}
                 <div>
-                  <label className="pendo-label mb-2">Interests & Hobbies</label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="pendo-label mb-0">Interests & Hobbies</label>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full transition-all ${
+                      interestsList.length >= 10
+                        ? 'bg-[var(--primary)] text-white animate-pulse'
+                        : 'bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-muted)]'
+                    }`}>
+                      {interestsList.length}/10 selected
+                    </span>
+                  </div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {commonInterests.map((interest) => {
                       const selected = interestsList.includes(interest);
