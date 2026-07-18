@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid registration details.' }, { status: 400 });
     }
 
-    const { email, password, name, dob, gender, preference } = body ?? {};
+    const { email, password, name, dob, gender, preference, interests, prompts } = body ?? {};
 
     // 2. Server-side validation and cleaning
     if (
@@ -104,7 +104,8 @@ export async function POST(request: Request) {
             dob: birthDate,
             gender,
             preference,
-            interests: '',
+            interests: typeof interests === 'string' ? interests : (Array.isArray(interests) ? interests.join(',') : ''),
+            prompts: prompts ? (Array.isArray(prompts) ? JSON.stringify(prompts) : prompts) : null,
             photos: '[]',
           },
         },
