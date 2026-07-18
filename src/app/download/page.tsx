@@ -299,6 +299,16 @@ export default function DownloadPage() {
                     Your browser doesn't support 1-click install. Please follow the step-by-step guides below to manually add Pendo to your home screen!
                   </div>
                 </div>
+
+                {/* Xiaomi/Redmi Specific Troubleshooting */}
+                <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 animate-pulse" />
+                  <div>
+                    <span className="font-bold block mb-1">Redmi / Xiaomi / POCO Fix</span>
+                    MIUI/HyperOS blocks shortcuts by default. Go to <strong>Settings</strong> ➔ <strong>Apps</strong> ➔ <strong>Manage Apps</strong> ➔ <strong>Chrome</strong> ➔ <strong>Other Permissions</strong> ➔ set <strong>"Home screen shortcuts"</strong> to <strong>Always Allow</strong>. Then try installing again!
+                  </div>
+                </div>
+
                 <button
                   onClick={() => setDownloadState('idle')}
                   className="w-full text-center text-xs text-[var(--text-muted)] hover:text-white transition underline"
@@ -352,6 +362,17 @@ export default function DownloadPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* MIUI/HyperOS Shortcut Fix */}
+              <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/15 text-[11px] text-[var(--text-muted)] leading-relaxed space-y-1 mt-4">
+                <p className="text-amber-400 font-bold flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  Redmi / Xiaomi / POCO Fix
+                </p>
+                <p>
+                  MIUI/HyperOS blocks Chrome app shortcuts by default. To install successfully: Go to <strong>Settings</strong> ➔ <strong>Apps</strong> ➔ <strong>Manage Apps</strong> ➔ <strong>Chrome</strong> ➔ <strong>Other Permissions</strong> ➔ set <strong>"Home screen shortcuts"</strong> to <strong>Always Allow</strong>.
+                </p>
               </div>
             </div>
 

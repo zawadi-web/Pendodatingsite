@@ -82,6 +82,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // For non-GET requests (e.g., POST/PUT/DELETE APIs), bypass cache entirely
+  if (event.request.method !== 'GET') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   // Network-first for all pages (fall back to cache if offline)
   event.respondWith(
     fetch(event.request)
