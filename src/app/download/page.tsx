@@ -13,6 +13,7 @@ export default function DownloadPage() {
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [platform, setPlatform] = useState<'android' | 'ios' | 'desktop' | 'unknown'>('unknown');
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
 
   // Countdown & redirect simulation states (similar to cricify.org)
   const [downloadState, setDownloadState] = useState<'idle' | 'counting' | 'completed' | 'not-supported'>('idle');
@@ -29,6 +30,10 @@ export default function DownloadPage() {
     if (isIOS) setPlatform('ios');
     else if (isAndroid) setPlatform('android');
     else if (!isMobile) setPlatform('desktop');
+
+    const isInApp = /instagram|fbav|fban|whatsapp|snapchat|line|micromessenger|tiktok|byteactivity/i.test(ua) || 
+                    (isAndroid && /version\//i.test(ua) && !/chrome/i.test(ua));
+    setIsInAppBrowser(isInApp);
 
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -162,6 +167,12 @@ export default function DownloadPage() {
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-white">
+      {isInAppBrowser && (
+        <div className="bg-amber-500 text-black px-4 py-3 text-center text-xs font-bold flex items-center justify-center gap-2 relative z-50 animate-bounce">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>You are using an In-App Browser (e.g. WhatsApp, TikTok). Tap the menu button (⋮ or share icon) and choose "Open in Chrome" or "Open in Safari" to install the app.</span>
+        </div>
+      )}
       {/* Nav */}
       <div className="p-4 border-b border-[var(--border)]">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -234,12 +245,21 @@ export default function DownloadPage() {
                   className="w-full flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-black text-lg shadow-lg hover:shadow-rose-500/20 transition duration-300 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Download className="w-5 h-5" />
-                  Download & Install Pendo App
+                  Install App Instantly
                 </button>
-                <div className="flex items-center justify-center gap-4 text-xs text-[var(--text-muted)]">
+                <div className="text-center text-xs text-[var(--text-muted)]">or</div>
+                <a
+                  href="/pendo.apk"
+                  download="pendo.apk"
+                  className="w-full flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-sm transition shadow-sm"
+                >
+                  <Smartphone className="w-4.5 h-4.5 text-rose-400" />
+                  Download Android APK (Direct)
+                </a>
+                <div className="flex items-center justify-center gap-4 text-xs text-[var(--text-muted)] pt-2">
                   <span className="flex items-center gap-1">🛡️ Secure Scan</span>
                   <span>•</span>
-                  <span>⚡ Fast Bundle (1.2MB)</span>
+                  <span>⚡ Direct APK Wrapper</span>
                   <span>•</span>
                   <span>v1.0.0</span>
                 </div>
