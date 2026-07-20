@@ -918,9 +918,26 @@ function ChatPageInner() {
                           : 'bg-[var(--surface-hover)] text-gray-100 rounded-bl-none border border-[var(--border)]'
                       }`}>
                         <p className="leading-relaxed break-words">{msg.content}</p>
-                        <span className="block text-[9px] mt-1 text-right opacity-60">
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <div className="flex items-center justify-end gap-1 mt-1">
+                          <span className="text-[9px] opacity-60">
+                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {mine && (
+                            <span
+                              className="text-[9px] font-medium"
+                              style={{
+                                color: msg.isRead
+                                  ? '#f472b6'
+                                  : msg.isDelivered
+                                  ? '#a78bfa'
+                                  : 'rgba(255,255,255,0.5)',
+                              }}
+                              title={msg.isRead ? 'Seen' : msg.isDelivered ? 'Delivered' : 'Sent'}
+                            >
+                              {msg.isRead ? '❤️ Seen' : msg.isDelivered ? '📨 Delivered' : '💬 Sent'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

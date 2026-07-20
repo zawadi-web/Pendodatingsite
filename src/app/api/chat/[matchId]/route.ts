@@ -36,7 +36,17 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Mark messages from other user as read
+    // Mark messages from other user as delivered (they opened the chat)
+    await prisma.message.updateMany({
+      where: {
+        matchId,
+        senderId: { not: currentUserId },
+        isDelivered: false,
+      },
+      data: { isDelivered: true },
+    });
+
+    // Mark messages from other user as read (they are viewing the chat)
     await prisma.message.updateMany({
       where: {
         matchId,
