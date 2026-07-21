@@ -433,73 +433,27 @@ export default function PremiumPage() {
                     ))}
                   </div>
 
-                  {/* M-Pesa Business Till Card */}
-                  <div className="bg-emerald-950/20 border border-emerald-800/30 rounded-xl p-4 space-y-2 mb-4">
-                    <p className="text-xs text-emerald-400 font-bold uppercase flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5" /> Lipa Na M-Pesa Business Till
-                    </p>
-                    <div className="flex items-center justify-between text-sm">
-                      <div>
-                        <p className="text-white font-bold">Till Number: <span className="text-emerald-400 font-mono text-base">3479524</span></p>
-                        <p className="text-xs text-[var(--text-muted)]">Store Number: 4735995</p>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Paystack Primary Button */}
                   <button
                     type="button"
                     onClick={handlePaystackSubscription}
-                    className="pendo-btn w-full py-4 text-base font-extrabold flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:opacity-90 transition-opacity mb-4"
+                    className="pendo-btn w-full py-4 text-base font-extrabold flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:opacity-90 transition-opacity"
                   >
                     <Sparkles className="w-5 h-5 fill-current" />
                     Pay KES {selectedPlan.price} via Paystack (M-Pesa / Card)
                   </button>
 
-                  <div className="relative my-4 text-center">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--border)]"></div></div>
-                    <span className="relative bg-[var(--surface-hover)] px-3 text-[10px] text-[var(--text-muted)] uppercase font-semibold">Or Direct STK Push</span>
-                  </div>
-
-                  <form onSubmit={handleInitiatePayment} className="space-y-4">
-                    <div>
-                      <label className="pendo-label flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-[var(--premium)]" />
-                        M-Pesa Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        placeholder="e.g. 0712345678"
-                        className="pendo-input"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                      />
-                      <p className="text-xs text-[var(--text-muted)] mt-1.5">
-                        Direct STK push to this Safaricom number.
-                      </p>
+                  {error && (
+                    <div className="flex items-center gap-2 text-sm text-rose-400 bg-rose-950/20 border border-rose-800/30 rounded-xl p-3">
+                      <X className="w-4 h-4 flex-shrink-0" />
+                      {error}
                     </div>
+                  )}
 
-                    {error && (
-                      <div className="flex items-center gap-2 text-sm text-rose-400 bg-rose-950/20 border border-rose-800/30 rounded-xl p-3">
-                        <X className="w-4 h-4 flex-shrink-0" />
-                        {error}
-                      </div>
-                    )}
-
-                    <button
-                      type="submit"
-                      disabled={!phoneNumber.trim()}
-                      className="pendo-btn pendo-btn-outline w-full py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      <Phone className="w-4 h-4" /> Send STK Push to Phone
-                    </button>
-                  </form>
-
-                    <p className="text-center text-xs text-[var(--text-muted)] mt-4">
-                      Secured via Paystack & Safaricom Daraja API
-                    </p>
-                  </>
+                  <p className="text-center text-xs text-[var(--text-muted)] mt-2">
+                    🔒 Secured by Paystack · M-Pesa, Visa &amp; Mastercard accepted
+                  </p>
+                </>
               )}
 
               {payStatus === 'SENDING' && (

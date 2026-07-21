@@ -329,45 +329,11 @@ export default function WalletPage() {
                 </div>
               ) : (
                 <>
-                  {/* SACCO Account Info */}
-                  {sysConfig?.saccoAccName && (
-                    <div className="bg-amber-950/20 border border-amber-800/30 rounded-xl p-4 space-y-2">
-                      <p className="text-xs text-amber-400 font-bold uppercase">Payment goes to {sysConfig.saccoAccName}</p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-white">{sysConfig.saccoAccName}</p>
-                          <p className="text-xs text-[var(--text-muted)] font-semibold mt-0.5">Paybill: {sysConfig.saccoAccNo}</p>
-                          {sysConfig.saccoInstructions && (
-                            <p className="text-xs text-[var(--text-muted)] mt-2 whitespace-pre-line bg-black/20 p-2.5 rounded-lg border border-white/5">
-                              {sysConfig.saccoInstructions}
-                            </p>
-                          )}
-                        </div>
-                        <button onClick={copyAccount} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-[var(--text-muted)] hover:text-white self-start ml-2">
-                          {copied ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* M-Pesa Business Till Card */}
-                  <div className="bg-emerald-950/20 border border-emerald-800/30 rounded-xl p-4 space-y-2">
-                    <p className="text-xs text-emerald-400 font-bold uppercase flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5" /> Lipa Na M-Pesa Business Till
-                    </p>
-                    <div className="flex items-center justify-between text-sm">
-                      <div>
-                        <p className="text-white font-bold">Till Number: <span className="text-emerald-400 font-mono text-base">3479524</span></p>
-                        <p className="text-xs text-[var(--text-muted)]">Store Number: 4735995</p>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Primary Paystack Button (M-Pesa / Cards) */}
                   <button
                     onClick={handlePaystackCheckout}
                     disabled={paying}
-                    className="pendo-btn w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 border-none text-white font-bold py-3 text-base shadow-[0_4px_15px_rgba(16,185,129,0.3)] hover:opacity-90 disabled:opacity-50"
+                    className="pendo-btn w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 border-none text-white font-bold py-3.5 text-base shadow-[0_4px_15px_rgba(16,185,129,0.3)] hover:opacity-90 disabled:opacity-50"
                   >
                     {paying ? (
                       <><RefreshCw className="w-5 h-5 animate-spin" /> Preparing Paystack...</>
@@ -376,25 +342,6 @@ export default function WalletPage() {
                     )}
                   </button>
 
-                  <div className="relative my-2 text-center">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--border)]"></div></div>
-                    <span className="relative bg-[var(--surface-hover)] px-3 text-[10px] text-[var(--text-muted)] uppercase font-semibold">Or Direct STK Push</span>
-                  </div>
-
-                  <div>
-                    <label className="pendo-label">M-Pesa Phone Number</label>
-                    <input
-                      type="tel"
-                      placeholder="e.g. 0712345678"
-                      className="pendo-input"
-                      value={mpesaPhone}
-                      onChange={(e) => setMpesaPhone(e.target.value)}
-                    />
-                    <p className="text-xs text-[var(--text-muted)] mt-1.5">
-                      Direct STK push to this phone number for KES {selectedPack.price}.
-                    </p>
-                  </div>
-
                   {payError && (
                     <div className="flex items-center gap-2 text-sm text-rose-400 bg-rose-950/20 border border-rose-800/30 rounded-lg p-3">
                       <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -402,17 +349,9 @@ export default function WalletPage() {
                     </div>
                   )}
 
-                  <button
-                    onClick={handleBuyCoins}
-                    disabled={paying || !mpesaPhone.trim()}
-                    className="pendo-btn pendo-btn-outline w-full flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {paying ? (
-                      <><RefreshCw className="w-4 h-4 animate-spin" /> Processing...</>
-                    ) : (
-                      <><Phone className="w-4 h-4" /> Send STK Push to Phone</>
-                    )}
-                  </button>
+                  <p className="text-center text-xs text-[var(--text-muted)]">
+                    🔒 Secured by Paystack · M-Pesa, Visa &amp; Mastercard accepted
+                  </p>
                 </>
               )}
             </div>
