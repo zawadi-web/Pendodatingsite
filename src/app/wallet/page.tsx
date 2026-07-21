@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import {
   Wallet, Coins, CreditCard, TrendingUp, ArrowUpRight, ArrowDownLeft,
-  Sparkles, CheckCircle, Clock, AlertCircle, Copy, RefreshCw, Zap
+  Sparkles, CheckCircle, Clock, AlertCircle, Copy, RefreshCw, Zap, Phone
 } from 'lucide-react';
 
 const COIN_PACKS = [
@@ -96,6 +96,33 @@ export default function WalletPage() {
       }
     } catch (err: any) {
       setPayError(err.message || 'Network error. Please try again.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handlePaystackCheckout = async () => {
+    if (!selectedPack) return;
+    setPaying(true);
+    setPayError('');
+    try {
+      const totalCoins = selectedPack.coins + (selectedPack.bonus || 0);
+      const res = await fetch('/api/paystack/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: selectedPack.price,
+          coinsToCredit: totalCoins,
+          email: user?.email,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Paystack checkout failed to load');
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url;
+      }
+    } catch (err: any) {
+      setPayError(err.message || 'Payment failed');
     } finally {
       setPaying(false);
     }
@@ -323,6 +350,37 @@ export default function WalletPage() {
                     </div>
                   )}
 
+                  {/* M-Pesa Business Till Card */}
+                  <div className="bg-emerald-950/20 border border-emerald-800/30 rounded-xl p-4 space-y-2">
+                    <p className="text-xs text-emerald-400 font-bold uppercase flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5" /> Lipa Na M-Pesa Business Till
+                    </p>
+                    <div className="flex items-center justify-between text-sm">
+                      <div>
+                        <p className="text-white font-bold">Till Number: <span className="text-emerald-400 font-mono text-base">3479524</span></p>
+                        <p className="text-xs text-[var(--text-muted)]">Store Number: 4735995</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Primary Paystack Button (M-Pesa / Cards) */}
+                  <button
+                    onClick={handlePaystackCheckout}
+                    disabled={paying}
+                    className="pendo-btn w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 border-none text-white font-bold py-3 text-base shadow-[0_4px_15px_rgba(16,185,129,0.3)] hover:opacity-90 disabled:opacity-50"
+                  >
+                    {paying ? (
+                      <><RefreshCw className="w-5 h-5 animate-spin" /> Preparing Paystack...</>
+                    ) : (
+                      <><CreditCard className="w-5 h-5" /> Pay KES {selectedPack.price} via Paystack (M-Pesa / Card)</>
+                    )}
+                  </button>
+
+                  <div className="relative my-2 text-center">
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--border)]"></div></div>
+                    <span className="relative bg-[var(--surface-hover)] px-3 text-[10px] text-[var(--text-muted)] uppercase font-semibold">Or Direct STK Push</span>
+                  </div>
+
                   <div>
                     <label className="pendo-label">M-Pesa Phone Number</label>
                     <input
@@ -333,7 +391,7 @@ export default function WalletPage() {
                       onChange={(e) => setMpesaPhone(e.target.value)}
                     />
                     <p className="text-xs text-[var(--text-muted)] mt-1.5">
-                      An STK push will be sent to this number for KES {selectedPack.price}.
+                      Direct STK push to this phone number for KES {selectedPack.price}.
                     </p>
                   </div>
 
@@ -347,12 +405,12 @@ export default function WalletPage() {
                   <button
                     onClick={handleBuyCoins}
                     disabled={paying || !mpesaPhone.trim()}
-                    className="pendo-btn w-full flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="pendo-btn pendo-btn-outline w-full flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {paying ? (
                       <><RefreshCw className="w-4 h-4 animate-spin" /> Processing...</>
                     ) : (
-                      <><CreditCard className="w-4 h-4" /> Pay KES {selectedPack.price} via M-Pesa</>
+                      <><Phone className="w-4 h-4" /> Send STK Push to Phone</>
                     )}
                   </button>
                 </>
