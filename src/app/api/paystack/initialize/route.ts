@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     }
 
     const customerEmail = user.email || email || `${userId}@pendo.app`;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pendodatingsite-qe2d.vercel.app';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pendodatingsite-hdix-five.vercel.app';
     const callbackUrl = `${appUrl}/api/paystack/callback`;
 
     // Paystack amounts are in cents/sub-units (1 KES = 100 cents)

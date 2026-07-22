@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const reference = searchParams.get('reference') || searchParams.get('trxref');
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pendodatingsite-qe2d.vercel.app';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pendodatingsite-hdix-five.vercel.app';
 
   if (!reference) {
     return NextResponse.redirect(`${appUrl}/wallet?error=No+reference+provided`);
