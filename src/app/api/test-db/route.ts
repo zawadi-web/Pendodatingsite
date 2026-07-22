@@ -9,11 +9,20 @@ export async function GET() {
     containsCredentials: rawUrl.includes('@'),
   };
 
+  const paystackInfo = {
+    secretKeyExists: !!process.env.PAYSTACK_SECRET_KEY,
+    secretKeyPrefix: process.env.PAYSTACK_SECRET_KEY ? process.env.PAYSTACK_SECRET_KEY.substring(0, 7) : 'none',
+    publicKeyExists: !!process.env.PAYSTACK_PUBLIC_KEY,
+    publicKeyPrefix: process.env.PAYSTACK_PUBLIC_KEY ? process.env.PAYSTACK_PUBLIC_KEY.substring(0, 7) : 'none',
+    keysFound: Object.keys(process.env).filter(k => k.startsWith('PAYSTACK')),
+  };
+
   try {
     const userCount = await prisma.user.count();
     return NextResponse.json({
       success: true,
       urlInfo,
+      paystackInfo,
       userCount,
       message: 'Successfully connected to database!',
     });
@@ -21,6 +30,7 @@ export async function GET() {
     return NextResponse.json({
       success: false,
       urlInfo,
+      paystackInfo,
       error: error.message || String(error),
       stack: error.stack,
     }, { status: 500 });
