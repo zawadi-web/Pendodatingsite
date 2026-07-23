@@ -1,9 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, Loader2, Eye, EyeOff, Sparkles, Trash2, ArrowLeft } from 'lucide-react';
+
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
 export default function Register() {
   const router = useRouter();
@@ -19,6 +25,74 @@ export default function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+
+  // Handle Google credential callback
+  const handleGoogleCredential = async (response: any) => {
+    if (!response?.credential) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/auth/google-callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Google authentication failed');
+
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Google authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const initGoogle = () => {
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return;
+
+      window.google.accounts.id.initialize({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+        callback: handleGoogleCredential,
+        ux_mode: 'popup',
+        cancel_on_tap_outside: false,
+      });
+
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        type: 'standard',
+        theme: 'filled_black',
+        size: 'large',
+        text: 'signup_with',
+        shape: 'pill',
+        width: googleBtnRef.current.offsetWidth || 400,
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      initGoogle();
+      return;
+    }
+
+    const existing = document.getElementById('gsi-script');
+    if (existing) {
+      existing.addEventListener('load', initGoogle);
+      return () => existing.removeEventListener('load', initGoogle);
+    }
+
+    const script = document.createElement('script');
+    script.id = 'gsi-script';
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = initGoogle;
+    document.body.appendChild(script);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Interests state
   const [interestsList, setInterestsList] = useState<string[]>([]);
@@ -308,6 +382,21 @@ export default function Register() {
               >
                 Next: Choose Interests
               </button>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 my-6">
+                <div className="flex-1 h-px bg-[var(--border)]" />
+                <span className="text-xs text-[var(--text-muted)]">OR</span>
+                <div className="flex-1 h-px bg-[var(--border)]" />
+              </div>
+
+              {/* Google Sign Up */}
+              <div
+                ref={googleBtnRef}
+                id="google-signup-btn"
+                className="w-full flex justify-center"
+                style={{ minHeight: 44 }}
+              />
             </div>
           )}
 

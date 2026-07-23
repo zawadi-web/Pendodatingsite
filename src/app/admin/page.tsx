@@ -617,45 +617,6 @@ export default function AdminDashboard() {
         {/* === CONFIG TAB === */}
         {activeTab === 'CONFIG' && (
           <div className="grid md:grid-cols-2 gap-6">
-            {/* SACCO Configuration */}
-            <div className="pendo-card space-y-4">
-              <h3 className="font-bold text-white flex items-center gap-2">
-                <Building className="w-5 h-5 text-purple-400" /> SACCO Account Settings
-              </h3>
-              <p className="text-xs text-[var(--text-muted)]">Configure the centralized payment collection account. All user payments are routed through this SACCO.</p>
-
-              <div>
-                <label className="pendo-label">SACCO Name</label>
-                <input
-                  type="text"
-                  className="pendo-input"
-                  value={config.saccoName || ''}
-                  onChange={(e) => setConfig({ ...config, saccoName: e.target.value })}
-                  placeholder="e.g. Pendo Holdings SACCO"
-                />
-              </div>
-              <div>
-                <label className="pendo-label">Account Number / Paybill</label>
-                <input
-                  type="text"
-                  className="pendo-input"
-                  value={config.saccoAccount || ''}
-                  onChange={(e) => setConfig({ ...config, saccoAccount: e.target.value })}
-                  placeholder="e.g. 174379 / 0712345678"
-                />
-              </div>
-              <div>
-                <label className="pendo-label">Payment Instructions</label>
-                <textarea
-                  rows={3}
-                  className="pendo-input resize-none"
-                  value={config.paymentInstructions || ''}
-                  onChange={(e) => setConfig({ ...config, paymentInstructions: e.target.value })}
-                  placeholder="e.g. Go to M-Pesa > Lipa na M-Pesa > Paybill..."
-                />
-              </div>
-            </div>
-
             {/* Pricing Configuration */}
             <div className="pendo-card space-y-4">
               <h3 className="font-bold text-white flex items-center gap-2">
@@ -750,36 +711,13 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* M-Pesa Config */}
-            <div className="pendo-card space-y-4">
-              <h3 className="font-bold text-white flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-emerald-400" /> M-Pesa / Daraja API
-              </h3>
-              <div>
-                <label className="pendo-label">Consumer Key</label>
-                <input type="password" className="pendo-input" value={config.mpesaConsumerKey || ''} onChange={(e) => setConfig({ ...config, mpesaConsumerKey: e.target.value })} placeholder="Daraja Consumer Key" />
-              </div>
-              <div>
-                <label className="pendo-label">Consumer Secret</label>
-                <input type="password" className="pendo-input" value={config.mpesaConsumerSecret || ''} onChange={(e) => setConfig({ ...config, mpesaConsumerSecret: e.target.value })} placeholder="Daraja Consumer Secret" />
-              </div>
-              <div>
-                <label className="pendo-label">Business Short Code</label>
-                <input type="text" className="pendo-input" value={config.mpesaShortCode || ''} onChange={(e) => setConfig({ ...config, mpesaShortCode: e.target.value })} placeholder="e.g. 174379" />
-              </div>
-              <div>
-                <label className="pendo-label">Passkey</label>
-                <input type="password" className="pendo-input" value={config.mpesaPasskey || ''} onChange={(e) => setConfig({ ...config, mpesaPasskey: e.target.value })} placeholder="STK Push Passkey" />
-              </div>
-            </div>
-
             {/* Platform Toggles */}
             <div className="pendo-card space-y-4">
               <h3 className="font-bold text-white flex items-center gap-2">
                 <Settings className="w-5 h-5 text-[var(--text-muted)]" /> Platform Controls
               </h3>
               {[
-                { key: 'mpesaEnabled', label: 'M-Pesa Payments Enabled', desc: 'Allow users to pay via M-Pesa' },
+                { key: 'mpesaEnabled', label: 'Paystack & M-Pesa Payments Enabled', desc: 'Allow users to purchase coins & subscriptions via Paystack (M-Pesa / Cards)' },
                 { key: 'profileUnlockEnabled', label: 'Profile Unlocking Enabled', desc: 'Let users unlock profiles with coins' },
                 { key: 'mediaUnlockEnabled', label: 'Media Unlocking Enabled', desc: 'Let users unlock media galleries' },
                 { key: 'messageCostEnabled', label: 'Charge Coins for Messages', desc: 'Deduct coins per message sent' },
