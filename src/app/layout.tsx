@@ -6,7 +6,7 @@ import PWARegistration from "@/components/PWARegistration";
 const inter = Inter({ subsets: ["latin"], display: 'swap' });
 
 export const viewport: Viewport = {
-  themeColor: "#FF3366",
+  themeColor: "#FF2E63",
   width: "device-width",
   initialScale: 1,
   minimumScale: 1,
