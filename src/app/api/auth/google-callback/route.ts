@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { generateToken } from '@/lib/auth';
+import { sendConciergeWelcomeMessage } from '@/lib/concierge';
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,6 +113,11 @@ export async function POST(request: NextRequest) {
           },
           include: { profile: true },
         });
+
+        // Trigger automated Concierge welcome message for new Google user
+        sendConciergeWelcomeMessage(user.id).catch((err) =>
+          console.error('Concierge welcome trigger error:', err)
+        );
       }
     }
 

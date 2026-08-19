@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { hashPassword, generateToken } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { sendConciergeWelcomeMessage } from '@/lib/concierge';
 
 export async function POST(request: Request) {
   try {
@@ -118,6 +119,11 @@ export async function POST(request: Request) {
       },
       select: { id: true, email: true, role: true },
     });
+
+    // Trigger automated Concierge welcome message in background
+    sendConciergeWelcomeMessage(newUser.id).catch((err) =>
+      console.error('Concierge welcome trigger error:', err)
+    );
 
     // Generate session token
     const token = generateToken({
